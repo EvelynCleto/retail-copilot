@@ -105,7 +105,7 @@ export default function App() {
   const [sidebar, setSidebar] = useState(true);
   const [used, setUsed]       = useState(new Set());
   const [chipList, setChipList] = useState(BASE.slice(0, 5));
-
+  const [chipsVisible, setChipsVisible] = useState(true);
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
 
