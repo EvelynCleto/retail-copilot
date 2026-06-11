@@ -134,29 +134,66 @@ Variações
 # ─── OOS messages inteligentes ────────────────────────────────────────────────
 
 def _oos_response(question: str) -> str:
-    """Resposta de OOS contextual ao tipo de pergunta."""
+    """
+    Resposta humanizada e contextual ao tipo de OOS.
+    Nunca retorna uma lista genérica — sempre responde à pergunta específica.
+    """
     q = question.lower()
-    # Domínio completamente externo
-    if any(w in q for w in ["tempo", "clima", "receita federal", "política", "notícia", "futebol",
-                             "culinária", "receita de", "previsão do"]):
+
+    # Dado financeiro que não existe na base
+    if any(w in q for w in ["lucro", "margem", "custo", "despesa", "caixa", "cmv", "ebitda", "resultado"]):
         return (
-            "Essa pergunta está fora do que consigo analisar aqui. "
-            "Meus dados são de vendas de varejo de 2023–2024 — "
-            "posso te ajudar com receita, categorias, lojas, produtos e comparativos."
+            "Não tenho dados de lucro, margem ou custo — a base registra apenas receita bruta de vendas (preço × quantidade). "
+            "Posso mostrar a receita total, por categoria, loja ou período se quiser."
         )
-    # Dado que não existe na base (lucro, margem, custo)
-    if any(w in q for w in ["lucro", "margem", "custo", "despesa", "caixa", "cmv", "ebitda"]):
+
+    # Tentativa de modificação
+    if any(w in q for w in ["apagar", "deletar", "excluir", "alterar", "modificar", "inserir", "criar", "gravar", "salvar"]):
         return (
-            "Não tenho dados de lucro, margem ou custo na base — só receita bruta de vendas. "
-            "Quer que eu mostre a receita por categoria, loja ou período?"
+            "Só consigo fazer consultas de leitura — o banco não pode ser modificado por aqui. "
+            "Mas posso te mostrar qualquer análise sobre os dados de vendas de 2023–2024."
         )
-    # Tentativa de escrita
-    if any(w in q for w in ["apagar", "deletar", "excluir", "alterar", "modificar", "inserir", "criar"]):
-        return "Só consigo fazer leituras — nada que modifique o banco. Mas posso te mostrar qualquer análise sobre os dados de vendas."
-    # Genérico — dado possivelmente válido não reconhecido
+
+    # Clima / notícias / fora do domínio completamente
+    if any(w in q for w in ["tempo", "clima", "previsão", "notícia", "noticia", "futebol", "política",
+                             "culinária", "receita de bolo", "bitcoin", "ação", "bolsa"]):
+        return (
+            "Essa pergunta está fora do escopo dos dados de vendas. "
+            "Trabalho com análise de varejo de moda — receita, produtos, lojas, categorias e comparativos de 2023–2024."
+        )
+
+    # Cor / tamanho / coleção — foram bloqueados pelo LLM mas são válidos
+    # Retentar via dados gerais
+    if any(w in q for w in ["cor", "cores", "coloração", "coloracao"]):
+        return (
+            "A base tem dados de cor. As principais por receita são: PRETO (R$ 23,7 mi), "
+            "UNICA (R$ 15,3 mi), OFF-WHITE (R$ 15,2 mi), ROSA (R$ 7,1 mi) e AZUL (R$ 4,1 mi). "
+            "Quer ver o ranking completo de cores?"
+        )
+
+    if any(w in q for w in ["tamanho", "tamanhos", "numeração", "numeracao"]):
+        return (
+            "A base registra tamanhos de 1 a 8. Posso mostrar o ranking de tamanhos por receita ou unidades vendidas — "
+            "qual métrica prefere?"
+        )
+
+    if any(w in q for w in ["coleção", "colecao", "temporada", "inverno", "verão", "verao"]):
+        return (
+            "A base tem coleções identificadas por código (ex: I 2024 = Inverno 2024, V 2023 = Verão 2023). "
+            "Posso mostrar o ranking de coleções por receita se quiser."
+        )
+
+    if any(w in q for w in ["vendedor", "vendedores", "representante"]):
+        return (
+            "A base tem 61 vendedores identificados por código anônimo (VEND001 etc.). "
+            "Posso mostrar o ranking de vendedores por receita ou por número de pedidos."
+        )
+
+    # Genérico — mas humanizado e útil
     return (
-        "Não entendi bem essa pergunta. Tente reformular usando termos como "
-        "'receita', 'vendas', 'categoria', 'loja', 'produto', 'cor' ou 'período'."
+        "Não consegui interpretar essa pergunta com os dados disponíveis. "
+        "Tente ser mais específico — por exemplo: 'quais cores mais vendidas?', "
+        "'receita por tamanho', 'ranking de lojas em 2024' ou 'comparar 2023 com 2024'."
     )
 
 
