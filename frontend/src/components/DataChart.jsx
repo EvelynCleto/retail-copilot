@@ -1,22 +1,19 @@
 /**
  * DataChart — gráficos automáticos estilo Google.
- * Detecta o tipo de dado e escolhe o melhor gráfico:
- *   - Série temporal (meses)  → área + linha
- *   - Ranking (categorias, lojas, cores, produtos) → barras horizontais
- *   - Comparativo (r2023/r2024 por dimensão) → barras agrupadas
+ * Tabela fica escondida por padrão, expande ao clicar "Ver números".
  */
+import { useState } from "react";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  Cell, ReferenceLine,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell,
 } from "recharts";
+import RankingTable from "./RankingTable";
 
-/* ── Paleta Linx ────────────────────────────────────────────────── */
-const LINX        = "#F5691E";
-const LINX_LIGHT  = "#FF9B68";
-const BLUE        = "#3B82F6";
-const BLUE_LIGHT  = "#93C5FD";
-const GRAY        = "#94A3B8";
+/* ── Paleta ─────────────────────────────────────────────────────── */
+const LINX       = "#F5691E";
+const LINX_LIGHT = "#FFBFA0";
+const BLUE       = "#93C5FD";
+const BLUE_DARK  = "#3B82F6";
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 const DMAP = { CALCA:"CALÇA", MACACAO:"MACACÃO", CALCAO:"CALÇÃO", SUETER:"SUÉTER" };
@@ -31,43 +28,39 @@ function applyMap(v) {
   );
 }
 
-function fmtMoney(v) {
-  if (v == null) return "—";
+function fmtShort(v) {
   const n = Number(v);
   if (isNaN(n)) return String(v);
-  if (n >= 1_000_000) return `R$ ${(n/1_000_000).toFixed(1).replace(".",",")}M`;
-  if (n >= 1_000)     return `R$ ${(n/1_000).toFixed(0)}k`;
-  return `R$ ${n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  if (n >= 1_000_000) return `R$\u00A0${(n/1_000_000).toFixed(1).replace(".",",")}M`;
+  if (n >= 1_000)     return `R$\u00A0${(n/1_000).toFixed(0)}k`;
+  return n.toLocaleString("pt-BR");
 }
 
-function fmtFull(v) {
+function fmtFull(v, isMoney) {
   const n = Number(v);
   if (isNaN(n)) return String(v);
-  return `R$ ${n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  if (isMoney) return `R$\u00A0${n.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  return n.toLocaleString("pt-BR");
 }
 
 /* ── Tooltip customizado ─────────────────────────────────────────── */
-function CustomTooltip({ active, payload, label }) {
+function Tip({ active, payload, label, moneyKeys = [] }) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
-      background:"#fff", border:"1px solid #E5E8ED",
-      borderRadius:10, padding:"10px 14px",
-      boxShadow:"0 4px 16px rgba(0,0,0,0.10)",
-      fontSize:12, fontFamily:"'Inter',sans-serif",
-      minWidth:160,
+      background:"#fff", border:"1px solid #E5E8ED", borderRadius:10,
+      padding:"10px 14px", boxShadow:"0 4px 20px rgba(0,0,0,0.10)",
+      fontSize:12, fontFamily:"'Inter',sans-serif", minWidth:170,
     }}>
-      <div style={{ fontWeight:600, color:"#0E1117", marginBottom:6 }}>
+      <div style={{ fontWeight:600, color:"#0E1117", marginBottom:7, fontSize:12.5 }}>
         {applyMap(String(label))}
       </div>
-      {payload.map((p, i) => (
-        <div key={i} style={{ display:"flex", justifyContent:"space-between", gap:16,
-          color: p.color, marginBottom:2 }}>
-          <span style={{ color:"#6B7280", fontWeight:400 }}>{p.name}</span>
+      {payload.map((p,i) => (
+        <div key={i} style={{ display:"flex", justifyContent:"space-between",
+          gap:20, marginBottom:3 }}>
+          <span style={{ color:"#9CA3AF" }}>{p.name}</span>
           <span style={{ fontWeight:600, color:"#0E1117" }}>
-            {typeof p.value === "number" && p.value > 1000
-              ? fmtFull(p.value)
-              : p.value?.toLocaleString?.("pt-BR") ?? p.value}
+            {fmtFull(p.value, moneyKeys.includes(p.dataKey))}
           </span>
         </div>
       ))}
@@ -75,181 +68,202 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-/* ── Detector de tipo de gráfico ─────────────────────────────────── */
+/* ── Detector ────────────────────────────────────────────────────── */
 export function detectChartType(data) {
   if (!data?.length) return null;
   const cols = Object.keys(data[0]);
   const labelCol = cols[0];
   const valCols  = cols.slice(1);
-
-  // Nenhuma coluna de valor numérica → sem gráfico
-  const hasNumeric = valCols.some(c =>
-    data.slice(0,3).every(r => !isNaN(Number(r[c])) && r[c] != null)
-  );
-  if (!hasNumeric) return null;
-
-  // Série temporal
+  const hasNum = valCols.some(c => data.slice(0,3).every(r => !isNaN(Number(r[c])) && r[c] != null));
+  if (!hasNum) return null;
   if (/mes|data|periodo/i.test(labelCol)) return "area";
-
-  // Comparativo (tem r2023 e r2024, ou p2023 e p2024, etc.)
   const has2023 = valCols.some(c => /2023/i.test(c));
   const has2024 = valCols.some(c => /2024/i.test(c));
   if (has2023 && has2024) return "grouped";
-
-  // Ranking com 2–20 linhas
-  if (data.length >= 2 && data.length <= 20) return "bar";
-
+  if (data.length >= 2 && data.length <= 25) return "bar";
   return null;
 }
 
-/* ── Gráfico de área (série temporal) ───────────────────────────── */
-function AreaChartView({ data }) {
+/* ── Gráfico de área ─────────────────────────────────────────────── */
+function AreaView({ data }) {
   const cols    = Object.keys(data[0]);
   const labelCol = cols[0];
-  const valCol   = cols.find(c => /receita|valor|total/i.test(c)) || cols[1];
+  const moneyCol = cols.find(c => /receita|valor|total/i.test(c));
   const countCol = cols.find(c => /unidade|quantidade|pedido/i.test(c));
+  const mainCol  = moneyCol || cols[1];
+  const moneyKeys = moneyCol ? [moneyCol] : [];
 
-  const chartData = data.map(row => ({
-    label: applyMap(String(row[labelCol])),
-    [valCol]: Number(row[valCol]),
-    ...(countCol ? { [countCol]: Number(row[countCol]) } : {}),
+  const d = data.map(r => ({
+    label: applyMap(String(r[labelCol])),
+    [mainCol]: Number(r[mainCol]),
+    ...(countCol && countCol !== mainCol ? { [countCol]: Number(r[countCol]) } : {}),
   }));
 
-  const hasCount = !!countCol;
-
   return (
-    <div style={s.wrap}>
-      <ResponsiveContainer width="100%" height={220}>
-        <AreaChart data={chartData} margin={{ top:10, right:20, left:10, bottom:0 }}>
-          <defs>
-            <linearGradient id="gradLinx" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%"  stopColor={LINX} stopOpacity={0.18}/>
-              <stop offset="95%" stopColor={LINX} stopOpacity={0}/>
+    <ResponsiveContainer width="100%" height={220}>
+      <AreaChart data={d} margin={{ top:10, right:16, left:0, bottom:0 }}>
+        <defs>
+          <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%"  stopColor={LINX} stopOpacity={0.18}/>
+            <stop offset="95%" stopColor={LINX} stopOpacity={0}/>
+          </linearGradient>
+          {countCol && countCol !== mainCol && (
+            <linearGradient id="gB" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%"  stopColor={BLUE_DARK} stopOpacity={0.12}/>
+              <stop offset="95%" stopColor={BLUE_DARK} stopOpacity={0}/>
             </linearGradient>
-            {hasCount && (
-              <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor={BLUE} stopOpacity={0.12}/>
-                <stop offset="95%" stopColor={BLUE} stopOpacity={0}/>
-              </linearGradient>
-            )}
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#F1F3F5" vertical={false}/>
-          <XAxis dataKey="label" tick={{ fontSize:11, fill:"#9CA3AF", fontFamily:"Inter" }}
-            axisLine={false} tickLine={false}/>
-          <YAxis yAxisId="left" tickFormatter={fmtMoney}
-            tick={{ fontSize:10, fill:"#9CA3AF", fontFamily:"Inter" }}
-            axisLine={false} tickLine={false} width={52}/>
-          {hasCount && (
-            <YAxis yAxisId="right" orientation="right"
-              tick={{ fontSize:10, fill:"#9CA3AF", fontFamily:"Inter" }}
-              axisLine={false} tickLine={false} width={40}/>
           )}
-          <Tooltip content={<CustomTooltip/>}/>
-          <Area yAxisId="left" type="monotone" dataKey={valCol}
-            name="Receita" stroke={LINX} strokeWidth={2.5}
-            fill="url(#gradLinx)" dot={false} activeDot={{ r:4, fill:LINX }}/>
-          {hasCount && (
-            <Area yAxisId="right" type="monotone" dataKey={countCol}
-              name="Unidades" stroke={BLUE} strokeWidth={1.8}
-              fill="url(#gradBlue)" dot={false} activeDot={{ r:4, fill:BLUE }}
-              strokeDasharray="4 2"/>
-          )}
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#F1F3F5" vertical={false}/>
+        <XAxis dataKey="label" tick={{ fontSize:11, fill:"#9CA3AF", fontFamily:"Inter" }}
+          axisLine={false} tickLine={false}/>
+        <YAxis tickFormatter={fmtShort} yAxisId="l"
+          tick={{ fontSize:10, fill:"#C5CBD4", fontFamily:"Inter" }}
+          axisLine={false} tickLine={false} width={56}/>
+        {countCol && countCol !== mainCol && (
+          <YAxis yAxisId="r" orientation="right"
+            tick={{ fontSize:10, fill:"#C5CBD4", fontFamily:"Inter" }}
+            axisLine={false} tickLine={false} width={40}/>
+        )}
+        <Tooltip content={<Tip moneyKeys={moneyKeys}/>}/>
+        <Area yAxisId="l" type="monotone" dataKey={mainCol}
+          name={moneyCol ? "Receita" : mainCol}
+          stroke={LINX} strokeWidth={2.5} fill="url(#gL)"
+          dot={false} activeDot={{ r:5, fill:LINX, strokeWidth:0 }}/>
+        {countCol && countCol !== mainCol && (
+          <Area yAxisId="r" type="monotone" dataKey={countCol}
+            name="Unidades" stroke={BLUE_DARK} strokeWidth={1.8}
+            fill="url(#gB)" strokeDasharray="4 2"
+            dot={false} activeDot={{ r:4, fill:BLUE_DARK, strokeWidth:0 }}/>
+        )}
+      </AreaChart>
+    </ResponsiveContainer>
   );
 }
 
-/* ── Gráfico de barras horizontais (ranking) ─────────────────────── */
-function BarChartView({ data }) {
-  const cols    = Object.keys(data[0]);
+/* ── Barras horizontais ──────────────────────────────────────────── */
+function BarView({ data }) {
+  const cols     = Object.keys(data[0]);
   const labelCol = cols[0];
   const valCol   = cols.find(c => /receita|valor|total/i.test(c)) || cols[1];
+  const moneyKeys = [valCol];
 
-  const chartData = [...data]
-    .sort((a,b) => Number(a[valCol]) - Number(b[valCol]))  // menor embaixo
-    .map(row => ({
-      label: applyMap(String(row[labelCol])),
-      value: Number(row[valCol]),
-    }));
+  const d = [...data]
+    .sort((a,b) => Number(a[valCol]) - Number(b[valCol]))
+    .map(r => ({ label: applyMap(String(r[labelCol])), value: Number(r[valCol]) }));
 
-  const maxVal = Math.max(...chartData.map(d => d.value));
+  const maxVal = Math.max(...d.map(x => x.value));
 
   return (
-    <div style={s.wrap}>
-      <ResponsiveContainer width="100%" height={Math.max(180, chartData.length * 42)}>
-        <BarChart data={chartData} layout="vertical"
-          margin={{ top:4, right:24, left:4, bottom:4 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#F1F3F5" horizontal={false}/>
-          <XAxis type="number" tickFormatter={fmtMoney}
-            tick={{ fontSize:10, fill:"#9CA3AF", fontFamily:"Inter" }}
-            axisLine={false} tickLine={false}/>
-          <YAxis type="category" dataKey="label" width={72}
-            tick={{ fontSize:12, fill:"#374151", fontFamily:"Inter", fontWeight:500 }}
-            axisLine={false} tickLine={false}/>
-          <Tooltip content={<CustomTooltip/>} cursor={{ fill:"#F8FAFC" }}/>
-          <Bar dataKey="value" name="Receita" radius={[0, 4, 4, 0]} maxBarSize={28}>
-            {chartData.map((entry, i) => (
-              <Cell key={i}
-                fill={entry.value === maxVal ? LINX : LINX_LIGHT}
-                opacity={entry.value === maxVal ? 1 : 0.55 + (i / chartData.length) * 0.35}
-              />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+    <ResponsiveContainer width="100%" height={Math.max(160, d.length * 44)}>
+      <BarChart data={d} layout="vertical" margin={{ top:4, right:20, left:8, bottom:4 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#F1F3F5" horizontal={false}/>
+        <XAxis type="number" tickFormatter={fmtShort}
+          tick={{ fontSize:10, fill:"#C5CBD4", fontFamily:"Inter" }}
+          axisLine={false} tickLine={false}/>
+        <YAxis type="category" dataKey="label" width={68}
+          tick={{ fontSize:12, fill:"#374151", fontFamily:"Inter", fontWeight:500 }}
+          axisLine={false} tickLine={false}/>
+        <Tooltip content={<Tip moneyKeys={moneyKeys}/>} cursor={{ fill:"#F9FAFB" }}/>
+        <Bar dataKey="value" name="Receita" radius={[0,5,5,0]} maxBarSize={26}>
+          {d.map((e,i) => (
+            <Cell key={i}
+              fill={e.value === maxVal ? LINX : LINX_LIGHT}
+              opacity={e.value === maxVal ? 1 : 0.5 + (i/d.length)*0.4}
+            />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
   );
 }
 
-/* ── Gráfico de barras agrupadas (comparativo) ───────────────────── */
-function GroupedBarView({ data }) {
+/* ── Barras agrupadas ────────────────────────────────────────────── */
+function GroupedView({ data }) {
   const cols    = Object.keys(data[0]);
   const labelCol = cols[0];
-  const col2023  = cols.find(c => /2023/.test(c));
-  const col2024  = cols.find(c => /2024/.test(c));
-  if (!col2023 || !col2024) return null;
+  const c23 = cols.find(c => /2023/.test(c));
+  const c24 = cols.find(c => /2024/.test(c));
+  if (!c23 || !c24) return null;
 
-  const chartData = data.map(row => ({
-    label: applyMap(String(row[labelCol])),
-    "2023": Number(row[col2023]),
-    "2024": Number(row[col2024]),
+  const d = data.map(r => ({
+    label: applyMap(String(r[labelCol])),
+    "2023": Number(r[c23]),
+    "2024": Number(r[c24]),
   }));
 
   return (
-    <div style={s.wrap}>
-      <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={chartData} margin={{ top:10, right:20, left:10, bottom:0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#F1F3F5" vertical={false}/>
-          <XAxis dataKey="label" tick={{ fontSize:11, fill:"#9CA3AF", fontFamily:"Inter" }}
-            axisLine={false} tickLine={false}/>
-          <YAxis tickFormatter={fmtMoney}
-            tick={{ fontSize:10, fill:"#9CA3AF", fontFamily:"Inter" }}
-            axisLine={false} tickLine={false} width={52}/>
-          <Tooltip content={<CustomTooltip/>} cursor={{ fill:"#F8FAFC" }}/>
-          <Legend wrapperStyle={{ fontSize:11, fontFamily:"Inter", paddingTop:8 }}/>
-          <Bar dataKey="2023" name="2023" fill={BLUE_LIGHT} radius={[3,3,0,0]} maxBarSize={22}/>
-          <Bar dataKey="2024" name="2024" fill={LINX}       radius={[3,3,0,0]} maxBarSize={22}/>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+    <ResponsiveContainer width="100%" height={240}>
+      <BarChart data={d} margin={{ top:10, right:16, left:0, bottom:0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#F1F3F5" vertical={false}/>
+        <XAxis dataKey="label" tick={{ fontSize:11, fill:"#9CA3AF", fontFamily:"Inter" }}
+          axisLine={false} tickLine={false}/>
+        <YAxis tickFormatter={fmtShort}
+          tick={{ fontSize:10, fill:"#C5CBD4", fontFamily:"Inter" }}
+          axisLine={false} tickLine={false} width={52}/>
+        <Tooltip content={<Tip moneyKeys={["2023","2024"]}/>} cursor={{ fill:"#F9FAFB" }}/>
+        <Legend wrapperStyle={{ fontSize:11, fontFamily:"Inter", paddingTop:10 }}/>
+        <Bar dataKey="2023" name="2023" fill={BLUE} radius={[3,3,0,0]} maxBarSize={24}/>
+        <Bar dataKey="2024" name="2024" fill={LINX} radius={[3,3,0,0]} maxBarSize={24}/>
+      </BarChart>
+    </ResponsiveContainer>
   );
 }
 
-/* ── Export principal ────────────────────────────────────────────── */
+/* ── Componente principal ────────────────────────────────────────── */
 export default function DataChart({ data }) {
+  const [showTable, setShowTable] = useState(false);
   const type = detectChartType(data);
   if (!type) return null;
-  if (type === "area")    return <AreaChartView    data={data}/>;
-  if (type === "bar")     return <BarChartView     data={data}/>;
-  if (type === "grouped") return <GroupedBarView   data={data}/>;
-  return null;
+
+  return (
+    <div style={s.wrap}>
+      {/* Gráfico */}
+      <div style={s.chart}>
+        {type === "area"    && <AreaView    data={data}/>}
+        {type === "bar"     && <BarView     data={data}/>}
+        {type === "grouped" && <GroupedView data={data}/>}
+      </div>
+
+      {/* Botão discreto "Ver números" */}
+      <div style={s.footer}>
+        <button style={s.toggle} onClick={() => setShowTable(v => !v)}>
+          {showTable
+            ? <><ChevUp/> Ocultar tabela</>
+            : <><ChevDown/> Ver números</>
+          }
+        </button>
+      </div>
+
+      {/* Tabela colapsável */}
+      {showTable && (
+        <div style={s.tableWrap}>
+          <RankingTable data={data}/>
+        </div>
+      )}
+    </div>
+  );
 }
 
 const s = {
-  wrap: {
-    background:"var(--surface)", borderRadius:12,
-    border:"1px solid var(--border)", padding:"16px 8px 8px",
-    marginBottom:8, boxShadow:"0 1px 4px rgba(0,0,0,0.06)",
-  },
+  wrap:      { background:"var(--surface)", borderRadius:14, border:"1px solid var(--border)",
+               boxShadow:"0 1px 6px rgba(0,0,0,0.06)", marginBottom:8, overflow:"hidden" },
+  chart:     { padding:"16px 8px 4px" },
+  footer:    { display:"flex", justifyContent:"center", padding:"4px 0 8px" },
+  toggle:    { display:"inline-flex", alignItems:"center", gap:5, background:"none", border:"none",
+               cursor:"pointer", fontSize:11.5, color:"var(--text-muted)", fontFamily:"inherit",
+               padding:"4px 12px", borderRadius:20,
+               transition:"color .13s, background .13s" },
+  tableWrap: { borderTop:"1px solid var(--border-subtle)" },
 };
+
+const ChevDown = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+const ChevUp = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+    <path d="M18 15l-6-6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);

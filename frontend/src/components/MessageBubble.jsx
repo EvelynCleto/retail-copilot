@@ -91,14 +91,11 @@ function AsstMessage({ message, isNew }) {
           </div>
         )}
 
-        {/* Gráfico automático — aparece antes da tabela quando aplicável */}
-        {hasTable && detectChartType(message.table) && (
-          <DataChart data={message.table}/>
-        )}
-
-        {/* Tabela ou texto */}
-        {hasTable
-          ? <RankingTable data={message.table}/>
+        {/* Gráfico com tabela colapsável — ou tabela sozinha se não há gráfico */}
+        {hasTable && detectChartType(message.table)
+          ? <DataChart data={message.table}/>
+          : hasTable
+            ? <RankingTable data={message.table}/>
           : (
             <div style={{ ...s.bubble, ...(message.error ? s.err : {}) }}>
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD}>
