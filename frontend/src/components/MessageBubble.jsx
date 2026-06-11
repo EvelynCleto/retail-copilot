@@ -79,9 +79,14 @@ export default function MessageBubble({ message, isNew }) {
         {/* KPI cards — aparecem antes de tudo */}
         {hasKpis && <KpiCards kpis={message.kpis}/>}
 
-        {/* Quando há tabela: APENAS tabela + insight no rodapé. SEM texto duplicado */}
+        {/* Quando há tabela: insight ANTES, depois tabela. SEM texto duplicado */}
         {hasTable
-          ? <RankingTable data={message.table} insight={insight || undefined}/>
+          ? <>
+              {insight && (
+                <div style={s.preInsight}>{insight}</div>
+              )}
+              <RankingTable data={message.table}/>
+            </>
           : (
             /* Sem tabela: texto completo */
             <div style={{ ...s.bubble, ...(message.error ? s.err : {}) }}>
@@ -129,6 +134,14 @@ const s = {
   },
   err:     { borderColor:"#FCA5A5", background:"#FFF8F8" },
   actions: { display:"flex", alignItems:"center", gap:14, marginTop:5 },
+  preInsight: {
+    fontSize:12.5, color:"var(--text-secondary)",
+    fontStyle:"italic", marginBottom:6,
+    padding:"8px 14px",
+    background:"var(--surface)", border:"1px solid var(--border)",
+    borderRadius:"3px 13px 13px 13px",
+    boxShadow:"var(--shadow-xs)",
+  },
 };
 
 /* ── Markdown styles ───────────────────────────────────────────── */

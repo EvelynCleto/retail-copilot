@@ -127,6 +127,24 @@ def generate_title(first_question: str) -> str:
         return " ".join(words[:4])
 
 
+def generate_strategic_answer(question: str) -> str:
+    """
+    Responde perguntas estratégicas/analíticas de CEO usando dados hardcoded.
+    Não precisa de SQL — o contexto já está no system prompt.
+    """
+    from prompt import SYSTEM_PROMPT_STRATEGIC
+    client = _get_client()
+    logger.info("→ STRATEGIC | '%s'", question[:80])
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=MAX_TOKENS_ANSWER,
+        system=SYSTEM_PROMPT_STRATEGIC,
+        messages=[{"role": "user", "content": question}],
+    )
+    logger.info("← STRATEGIC | out=%s", response.usage.output_tokens)
+    return _extract_text(response)
+
+
 def generate_sql_and_rewrite_parallel(question: str, history: list[dict]) -> tuple[str, str]:
     """
     Executa generate_sql e rewrite_question em paralelo.

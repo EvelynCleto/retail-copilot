@@ -36,7 +36,7 @@ function fmtCell(v, money, count, pct) {
   return mapVal(String(v));
 }
 
-export default function RankingTable({ data, insight }) {
+export default function RankingTable({ data }) {
   if (!data?.length) return null;
 
   const cols      = Object.keys(data[0]);
@@ -58,8 +58,8 @@ export default function RankingTable({ data, insight }) {
     <div style={t.wrap}>
       <div style={t.scroll}>
         <table style={t.table}>
-          <thead>
-            <tr style={t.headRow}>
+          <thead style={t.thead}>
+            <tr>
               {!series && <th style={{...t.th, width:36, textAlign:"center"}}>#</th>}
               <th style={t.th}>{labelCol.toUpperCase().replace(/_/g," ")}</th>
               {valCols.map(c => (
@@ -137,7 +137,6 @@ export default function RankingTable({ data, insight }) {
         </table>
       </div>
 
-      {insight && <div style={t.insight}>{insight}</div>}
     </div>
   );
 }
@@ -147,10 +146,11 @@ const t = {
               marginBottom:8, boxShadow:"var(--shadow-xs)", overflow:"hidden" },
   scroll:   { overflowX:"auto" },
   table:    { width:"100%", borderCollapse:"collapse", fontSize:12.5 },
-  headRow:  { borderBottom:"1px solid var(--border)" },
+  thead:    { background:"#F8FAFC" },
   th:       { padding:"9px 14px", background:"#F8FAFC", fontWeight:700,
-              color:"var(--text-secondary)", fontSize:10.5, textTransform:"uppercase",
-              letterSpacing:"0.08em", whiteSpace:"nowrap", textAlign:"left" },
+              color:"var(--text-secondary)", fontSize:11, textTransform:"uppercase",
+              letterSpacing:"0.07em", whiteSpace:"nowrap", textAlign:"left",
+              borderBottom:"1px solid var(--border)" },
   td:       { padding:"8px 14px", color:"#374151",
               borderBottom:"1px solid var(--border-subtle)", whiteSpace:"nowrap" },
   rank:     { color:"var(--text-muted)", fontWeight:600, fontSize:11 },
@@ -161,6 +161,5 @@ const t = {
   barFill:  { height:"100%", borderRadius:2, transition:"width .5s ease" },
   totalRow: { background:"#F8FAFC" },
   totalTd:  { borderTop:"1px solid var(--border)", borderBottom:"none", paddingTop:10 },
-  insight:  { padding:"9px 14px 11px", fontSize:12, color:"var(--text-secondary)",
-              fontStyle:"italic", borderTop:"1px solid var(--border-subtle)" },
+
 };

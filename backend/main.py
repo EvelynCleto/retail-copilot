@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from database import execute_query, DatabaseError
 from guardrails import validate_sql, is_out_of_scope, is_write_attempt
-from llm import generate_sql, generate_answer, generate_title, generate_sql_and_rewrite_parallel
+from llm import generate_sql, generate_answer, generate_title, generate_sql_and_rewrite_parallel, generate_strategic_answer
 from prompt import DISPLAY_MAP
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -189,11 +189,34 @@ def _oos_response(question: str) -> str:
             "Posso mostrar o ranking de vendedores por receita ou por número de pedidos."
         )
 
-    # Genérico — mas humanizado e útil
+    # Genérico — humanizado, a pessoa se sente ouvida
+    # Extrair o assunto principal da pergunta para personalizar a resposta
+    import re as _re
+    # Tentar identificar a intenção
+    if any(w in q for w in ["previsão", "previsao", "forecast", "projeção", "projecao", "próximo ano", "2025"]):
+        return (
+            "Não tenho dados futuros na base — só o histórico de 2023–2024. "
+            "Mas posso te mostrar tendências e sazonalidade que ajudam a estimar o que esperar."
+        )
+    if any(w in q for w in ["concorrente", "mercado", "setor", "benchmark", "competidor"]):
+        return (
+            "Não tenho dados de mercado ou concorrentes — só os dados internos de vendas. "
+            "Posso analisar o desempenho interno da empresa com detalhes de lojas, categorias e produtos."
+        )
+    if any(w in q for w in ["estoque", "inventário", "inventario", "ruptura", "reposição", "reposicao"]):
+        return (
+            "Não tenho dados de estoque na base — só vendas realizadas. "
+            "Posso mostrar o volume de unidades vendidas por produto, categoria ou período se ajudar."
+        )
+    if any(w in q for w in ["funcionário", "funcionario", "colaborador", "equipe", "rh", "salário", "salario"]):
+        return (
+            "Não tenho dados de RH ou folha de pagamento — só dados de vendas. "
+            "Posso mostrar dados de vendedores (id_vendedor) se quiser analisar produtividade por vendedor."
+        )
     return (
-        "Não consegui interpretar essa pergunta com os dados disponíveis. "
-        "Tente ser mais específico — por exemplo: 'quais cores mais vendidas?', "
-        "'receita por tamanho', 'ranking de lojas em 2024' ou 'comparar 2023 com 2024'."
+        "Não consegui encontrar essa informação nos dados de vendas. "
+        "Trabalho com o histórico de 2023–2024 — receita, pedidos, lojas, categorias, produtos, cores e coleções. "
+        "Tente reformular a pergunta dentro desse escopo."
     )
 
 
@@ -349,6 +372,49 @@ async def chat(request: ChatRequest):
         title    = "Briefing Executivo" if is_first else None
         return {"answer": answer, "display_question": "Briefing executivo completo",
                 "conversation_title": title, "error": False}
+
+    # ── Perguntas estratégicas — respondem com análise, não SQL ─────────────────
+    # Detectar intenção analítica: perguntas que precisam de julgamento executivo
+    _STRATEGIC_SIGNALS = [
+        "risco", "riscos", "concentração", "concentracao", "dependência", "dependencia",
+        "saudável", "saudavel", "saúde do negócio", "cresceu", "encolheu",
+        "prioridade", "priorizar", "investimento", "oportunidade", "oportunidades",
+        "driver", "drivers", "motor de", "sustentável", "sustentavel",
+        "ameaça", "ameaca", "fragilidade", "frágil", "fragil",
+        "expansão", "expansao", "estratégia", "estrategia",
+        "se você fosse", "se eu fosse", "o que recomenda", "o que você recomenda",
+        "o que chama atenção", "o que mais chama", "o que devo priorizar",
+        "insights mais importantes", "principais conclusões", "historia que os dados",
+        "história que os dados", "apresentaria ao conselho", "apresentaria ao board",
+        "cinco pontos", "três prioridades", "maior preocupação", "maior preocupacao",
+        "potencial de crescimento", "perdendo participação", "perdendo participacao",
+        "destaque positivo", "destaques positivos", "ponto de atenção", "pontos de atenção",
+        "resiliente", "escalável", "escalavel", "excesso", "excessiva", "excessivo",
+        "quais riscos", "identifica riscos", "maior risco",
+        "se tivesse que fechar", "se pudesse expandir", "produtividade",
+        "kpis", "dashboard executivo", "acompanhar", "métricas",
+        "convencer um investidor", "board amanhã", "board amanha",
+    ]
+    is_strategic = any(sig in message.lower() for sig in _STRATEGIC_SIGNALS)
+
+    if is_strategic:
+        try:
+            logger.info("STRATEGIC: '%s'", message[:80])
+            answer = generate_strategic_answer(message)
+            from prompt import DISPLAY_MAP as DM
+            import re as _re
+            pattern = r'\b(' + '|'.join(_re.escape(k) for k in DM.keys()) + r')\b'
+            answer = _re.sub(pattern, lambda m: DM.get(m.group(0), m.group(0)), answer)
+            title = generate_title(message) if is_first and request.generate_title else None
+            return {
+                "answer": answer,
+                "display_question": None,
+                "conversation_title": title,
+                "sql": None, "table": None, "kpis": None, "error": False,
+            }
+        except Exception as e:
+            logger.error("STRATEGIC ERRO: %s", e)
+            # Fallback: tentar como SQL normal
 
     questions = split_questions(message)
 
