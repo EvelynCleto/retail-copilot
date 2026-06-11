@@ -1,3 +1,6 @@
+/**
+ * KpiCards — com tooltip no sparkline e label de período explícito.
+ */
 function fmt(v, type) {
   if (v == null) return "—";
   const n = Number(v);
@@ -7,18 +10,26 @@ function fmt(v, type) {
   return String(v);
 }
 
-function Spark({ v23, v24, up }) {
+function Sparkline({ v23, v24, up, label }) {
   const W=38, H=16, p=2;
   const mn=Math.min(v23,v24), mx=Math.max(v23,v24), rng=mx-mn||1;
-  const pts=[v23,v24].map((v,i)=>`${(p+(i/1)*(W-p*2)).toFixed(1)},${(H-p-((v-mn)/rng)*(H-p*2)).toFixed(1)}`);
+  const pts=[v23,v24].map((v,i)=>
+    `${(p+(i/1)*(W-p*2)).toFixed(1)},${(H-p-((v-mn)/rng)*(H-p*2)).toFixed(1)}`
+  );
   const [x2,y2]=pts[1].split(",").map(Number);
   const c = up ? "var(--green)" : "var(--red)";
+  const pct = v23 ? Math.abs(Math.round((v24-v23)/v23*10)/10) : 0;
+  const dir = up ? "Alta" : "Queda";
+  const tooltip = `${dir} de ${pct.toFixed(1).replace(".",",")}% de 2023 para 2024`;
   return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{display:"block",flexShrink:0}}>
-      <polyline points={pts.join(" ")} fill="none" stroke={c}
-        strokeWidth="1.5" strokeLinecap="round" opacity=".4"/>
-      <circle cx={x2} cy={y2} r="2.4" fill={c}/>
-    </svg>
+    <div className="kpi-spark-wrap">
+      <div className="kpi-tooltip">{tooltip}</div>
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{display:"block"}}>
+        <polyline points={pts.join(" ")} fill="none" stroke={c}
+          strokeWidth="1.5" strokeLinecap="round" opacity=".45"/>
+        <circle cx={x2} cy={y2} r="2.4" fill={c}/>
+      </svg>
+    </div>
   );
 }
 
@@ -46,14 +57,14 @@ export default function KpiCards({ kpis }) {
           <div key={i} style={s.card}>
             <div style={s.top}>
               <span style={s.lbl}>{k.label}</span>
-              <Spark v23={k.value_2023} v24={k.value_2024} up={up}/>
+              <Sparkline v23={k.value_2023} v24={k.value_2024} up={up} label={k.label}/>
             </div>
             <div style={s.period}>2024</div>
             <div style={s.val}>{fmt(k.value_2024, k.format)}</div>
             <div style={s.sep}/>
             <div style={s.bot}>
               <div>
-                <div style={s.p23lbl}>2023</div>
+                <div style={s.p23lbl}>vs 2023</div>
                 <div style={s.p23val}>{fmt(k.value_2023, k.format)}</div>
               </div>
               <Delta pct={k.var_pct}/>
@@ -71,16 +82,17 @@ const s = {
   card:   { background:"var(--surface)", border:"1px solid var(--border)",
             borderRadius:11, padding:"11px 14px", boxShadow:"var(--shadow-xs)" },
   top:    { display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:4 },
-  lbl:    { fontSize:9, fontWeight:800, color:"var(--text-muted)",
-            textTransform:"uppercase", letterSpacing:"0.11em" },
+  lbl:    { fontSize:9.5, fontWeight:800, color:"var(--text-muted)",
+            textTransform:"uppercase", letterSpacing:"0.1em" },
   period: { fontSize:9.5, color:"var(--text-muted)", fontWeight:600, marginBottom:1 },
-  val:    { fontSize:12.5, fontWeight:700, color:"var(--text-primary)",
+  val:    { fontSize:13, fontWeight:700, color:"var(--text-primary)",
             fontFamily:"'JetBrains Mono',monospace",
             letterSpacing:"-0.01em", marginBottom:7, lineHeight:1.4 },
   sep:    { height:1, background:"var(--border-subtle)", marginBottom:7 },
   bot:    { display:"flex", alignItems:"center", justifyContent:"space-between", gap:4 },
-  p23lbl: { fontSize:9, color:"var(--text-disabled)", fontWeight:700, letterSpacing:"0.08em" },
+  p23lbl: { fontSize:9, color:"var(--text-disabled)", fontWeight:700, letterSpacing:"0.08em",
+            textTransform:"uppercase" },
   p23val: { fontSize:10.5, color:"var(--text-muted)",
             fontFamily:"'JetBrains Mono',monospace",
-            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:110 },
+            overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:120 },
 };

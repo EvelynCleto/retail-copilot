@@ -83,7 +83,7 @@ function ConvItem({ conv, active, onSelect, onRename, onPin, onDelete }) {
         onClick={onSelect}
       >
         <BubbleIco active={active} />
-        <span style={ci.label}>
+        <span style={ci.label} title={conv.title}>
           {conv.pinned && <span style={{ fontSize:9, marginRight:3 }}>📌</span>}
           {conv.title}
         </span>
@@ -175,8 +175,17 @@ export default function ConversationSidebar({
 
       {/* Footer */}
       <div style={sb.footer}>
-        <span style={sb.footDot} />
-        <span style={sb.footTxt}>Dados 2023 – 2024</span>
+        <div style={sb.footTop}>
+          <span style={sb.footDot} />
+          <span style={sb.footStatus}>Banco ativo</span>
+        </div>
+        <div style={sb.footMeta}>
+          <div style={sb.footRow}><span style={sb.footKey}>Período</span><span style={sb.footVal}>2023 – 2024</span></div>
+          <div style={sb.footRow}><span style={sb.footKey}>Registros</span><span style={sb.footVal}>90.559</span></div>
+          <div style={sb.footRow}><span style={sb.footKey}>Lojas</span><span style={sb.footVal}>A, B, C, D, E</span></div>
+          <div style={sb.footRow}><span style={sb.footKey}>Categorias</span><span style={sb.footVal}>5</span></div>
+          <div style={sb.footRow}><span style={sb.footKey}>Produtos</span><span style={sb.footVal}>1.768</span></div>
+        </div>
       </div>
 
       <style>{`
@@ -211,9 +220,14 @@ const sb = {
   list:      { flex:1, overflowY:"auto", padding:"0 6px", overflowX:"visible" },
   groupLabel:{ fontSize:9.5, fontWeight:800, color:"#374151",
                textTransform:"uppercase", letterSpacing:"0.1em", padding:"6px 7px 3px" },
-  footer:    { padding:"10px 12px", borderTop:"1px solid var(--sidebar-border)",
-               display:"flex", alignItems:"center", gap:7, flexShrink:0 },
+  footer:    { padding:"11px 12px 13px", borderTop:"1px solid var(--sidebar-border)",
+               flexShrink:0 },
+  footTop:   { display:"flex", alignItems:"center", gap:6, marginBottom:9 },
   footDot:   { width:6, height:6, borderRadius:"50%", background:"#22C55E",
-               boxShadow:"0 0 0 2px rgba(34,197,94,.2)" },
-  footTxt:   { color:"#4B5563", fontSize:11 },
+               boxShadow:"0 0 0 2px rgba(34,197,94,.2)", flexShrink:0 },
+  footStatus:{ color:"#4B5563", fontSize:11, fontWeight:500 },
+  footMeta:  { display:"flex", flexDirection:"column", gap:3 },
+  footRow:   { display:"flex", justifyContent:"space-between", alignItems:"center" },
+  footKey:   { fontSize:10, color:"#374151", fontWeight:500 },
+  footVal:   { fontSize:10, color:"#6B7280" },
 };

@@ -6,11 +6,11 @@ import { sendMessage } from "./api";
 import "./index.css";
 
 const BASE = [
-  "Me dê um resumo executivo.",
-  "Compare 2023 com 2024.",
+  "Resumo executivo do período.",
+  "2023 vs 2024: quem saiu na frente?",
   "Qual loja liderou em faturamento?",
-  "Quais categorias mais venderam?",
-  "Qual foi o melhor mês de 2024?",
+  "Top 5 categorias de 2023.",
+  "Qual foi o pior mês em vendas?",
   "Qual o ticket médio por pedido?",
 ];
 // Sugestões contextuais baseadas no ÚLTIMO assunto discutido
@@ -243,7 +243,7 @@ function Header({ sidebar, onToggle, title, onCEO, messages = [] }) {
           )}
           <span style={hd.divider} />
           <span style={hd.dot} />
-          <span style={hd.status}>Online</span>
+          <span style={hd.status}>Banco ativo</span>
         </div>
       </div>
       {/* Linha de acento laranja Linx */}
@@ -268,7 +268,7 @@ const hd = {
   divider:{ width:1, height:16, background:"var(--border)" },
   dot:    { width:7, height:7, borderRadius:"50%", background:"#22C55E",
             boxShadow:"0 0 0 2px rgba(34,197,94,.2)" },
-  status: { fontSize:11, color:"var(--text-muted)", fontWeight:500 },
+  status: { fontSize:11, color:"var(--text-secondary)", fontWeight:500 },
   accent: { height:2,
             background:"linear-gradient(90deg, transparent 0%, var(--linx) 30%, #FF9F5A 70%, transparent 100%)",
             opacity:0.8 },
@@ -289,9 +289,9 @@ function Empty({ onSelect, loading }) {
           </svg>
         </div>
         <h1 style={em.h1}>Retail Insights</h1>
-        <p style={em.p}>Análise de vendas, receita, produtos e lojas em linguagem natural.</p>
+        <p style={em.p}>Faça qualquer pergunta sobre as vendas de 2023–2024. Busco direto no banco.</p>
       </div>
-      <p style={em.label}>Comece com uma pergunta</p>
+      <p style={em.label}>Perguntas frequentes</p>
       <div className="egrid" style={em.grid}>
         {BASE.map((sg, i) => (
           <button key={sg} className="ecard"
@@ -381,6 +381,7 @@ const Footer = forwardRef(function Footer({ input, setInput, onSend, loading, ch
           onKeyDown={key} disabled={loading}
           placeholder="Pergunte qualquer coisa sobre o negócio..." />
         <button
+          className="send-btn"
           style={{ ...ft.send, ...(loading || !input.trim() ? ft.off : ft.on) }}
           onClick={() => onSend()} disabled={loading || !input.trim()}>
           <ArrowUp active={!loading && !!input.trim()} />
@@ -406,7 +407,7 @@ const ft = {
            fontFamily:"inherit", whiteSpace:"nowrap",
            transition:"border-color .13s, color .13s, background .13s, box-shadow .13s",
            opacity:0, animation:"fadeUp .2s var(--ease) forwards" },
-  chipArrow:{ fontSize:9, color:"var(--text-disabled)", flexShrink:0 },
+  chipArrow:{ fontSize:9, color:"var(--linx)", flexShrink:0, opacity:0.6 },
   row:   { maxWidth:760, margin:"0 auto", display:"flex", gap:8, alignItems:"flex-end" },
   ta:    { flex:1, border:"1px solid var(--border)", borderRadius:14,
            padding:"10px 17px", fontSize:13.5, fontFamily:"inherit",
@@ -415,7 +416,7 @@ const ft = {
            transition:"border-color .15s, background .15s, box-shadow .15s" },
   send:  { width:38, height:38, borderRadius:11, border:"none", cursor:"pointer",
            display:"flex", alignItems:"center", justifyContent:"center",
-           flexShrink:0, transition:"background .12s, box-shadow .12s" },
+           flexShrink:0, transition:"background 0.15s ease, box-shadow 0.15s ease" },
   on:    { background:"var(--linx)", boxShadow:"0 2px 10px rgba(245,105,30,.35)" },
   off:   { background:"var(--border)", cursor:"not-allowed" },
   hint:  { maxWidth:760, margin:"4px auto 0", fontSize:10, color:"var(--text-disabled)", textAlign:"center" },

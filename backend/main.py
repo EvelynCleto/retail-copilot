@@ -31,7 +31,7 @@ _CEO_QUERIES = {
     "t2023": "SELECT ROUND(SUM(receita)*1.0/COUNT(DISTINCT id_pedido),2) AS v FROM vendas WHERE strftime('%Y',data_venda)='2023'",
     "t2024": "SELECT ROUND(SUM(receita)*1.0/COUNT(DISTINCT id_pedido),2) AS v FROM vendas WHERE strftime('%Y',data_venda)='2024'",
     "loja_lider": "SELECT loja, ROUND(SUM(receita),2) AS r FROM vendas GROUP BY loja ORDER BY r DESC LIMIT 1",
-    "loja_pct":   "SELECT ROUND(100.0*SUM(CASE WHEN loja='Loja A' THEN receita END)/SUM(receita),1) AS v FROM vendas",
+    "loja_pct": "SELECT ROUND(100.0*SUM(CASE WHEN loja='Loja A' THEN receita END)/SUM(receita),1) AS v FROM vendas",
     "cat_cres": "SELECT categoria, ROUND(100.0*(SUM(CASE WHEN strftime('%Y',data_venda)='2024' THEN receita END)-SUM(CASE WHEN strftime('%Y',data_venda)='2023' THEN receita END))/SUM(CASE WHEN strftime('%Y',data_venda)='2023' THEN receita END),1) AS var FROM vendas GROUP BY categoria ORDER BY var DESC LIMIT 1",
     "cat_queda": "SELECT categoria, ROUND(100.0*(SUM(CASE WHEN strftime('%Y',data_venda)='2024' THEN receita END)-SUM(CASE WHEN strftime('%Y',data_venda)='2023' THEN receita END))/SUM(CASE WHEN strftime('%Y',data_venda)='2023' THEN receita END),1) AS var FROM vendas GROUP BY categoria ORDER BY var ASC LIMIT 1",
     "calca_perda": "SELECT ROUND(SUM(CASE WHEN strftime('%Y',data_venda)='2023' THEN receita END)-SUM(CASE WHEN strftime('%Y',data_venda)='2024' THEN receita END),2) AS v FROM vendas WHERE categoria='CALCA'",
@@ -116,11 +116,11 @@ Variações
 
 ---
 
-**Liderança**
+**Liderança (2023–2024)**
 - Loja líder: {loja_nm} — {_fmtR(loja_r)} ({loja_pct}% da receita)
 - Categoria líder: CALÇA (32,7%)
 - Produto líder: {pr_nm} ({_fmtR(pr_r)})
-- Melhor mês: {mel_nm} ({_fmtR(mel_r)})
+- Melhor mês 2024: {mel_nm} ({_fmtR(mel_r)})
 - Maior crescimento: {cn} ({_fmtPct(cv)})
 
 ---
@@ -129,6 +129,35 @@ Variações
 - {qn}: {_fmtPct(qv)} (perda de {_fmtR(calca_p)})
 - {loja_nm} concentra {loja_pct}% da receita total
 - Volume caiu: pedidos {_fmtPct(var_p)}, clientes -8,1%"""
+
+
+# ─── OOS messages inteligentes ────────────────────────────────────────────────
+
+def _oos_response(question: str) -> str:
+    """Resposta de OOS contextual ao tipo de pergunta."""
+    q = question.lower()
+    # Domínio completamente externo
+    if any(w in q for w in ["tempo", "clima", "receita federal", "política", "notícia", "futebol",
+                             "culinária", "receita de", "previsão do"]):
+        return (
+            "Essa pergunta está fora do que consigo analisar aqui. "
+            "Meus dados são de vendas de varejo de 2023–2024 — "
+            "posso te ajudar com receita, categorias, lojas, produtos e comparativos."
+        )
+    # Dado que não existe na base (lucro, margem, custo)
+    if any(w in q for w in ["lucro", "margem", "custo", "despesa", "caixa", "cmv", "ebitda"]):
+        return (
+            "Não tenho dados de lucro, margem ou custo na base — só receita bruta de vendas. "
+            "Quer que eu mostre a receita por categoria, loja ou período?"
+        )
+    # Tentativa de escrita
+    if any(w in q for w in ["apagar", "deletar", "excluir", "alterar", "modificar", "inserir", "criar"]):
+        return "Só consigo fazer leituras — nada que modifique o banco. Mas posso te mostrar qualquer análise sobre os dados de vendas."
+    # Genérico — dado possivelmente válido não reconhecido
+    return (
+        "Não entendi bem essa pergunta. Tente reformular usando termos como "
+        "'receita', 'vendas', 'categoria', 'loja', 'produto', 'cor' ou 'período'."
+    )
 
 
 # ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -154,9 +183,8 @@ class ChatResponse(BaseModel):
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
-def _clean_message(message: str) -> str:
-    """Remove aspas e caracteres estranhos antes do split."""
-    return re.sub(r'[\"\'\u201c\u201d\u2018\u2019]+', ' ', message).strip()
+def _clean_message(m: str) -> str:
+    return re.sub(r'[\"\'\u201c\u201d\u2018\u2019]+', ' ', m).strip()
 
 def split_questions(message: str) -> list[str]:
     message = _clean_message(message)
@@ -164,8 +192,7 @@ def split_questions(message: str) -> list[str]:
     questions = []
     for part in parts:
         cleaned = part.strip()
-        if not cleaned or len(cleaned) < 5:
-            continue
+        if not cleaned or len(cleaned) < 5: continue
         subs = re.split(r"\.\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ])", cleaned)
         for sub in subs:
             sub = sub.strip().rstrip(".")
@@ -231,14 +258,7 @@ def _process_single(question: str, history: list[dict]) -> dict:
     if is_out_of_scope(sql):
         logger.info("OOS: '%s'", question[:60])
         result["out_of_scope"] = True
-        # OOS → resposta curta com dados gerais, não CEO inteiro
-        result["answer"] = (
-            "Com os dados disponíveis (2023–2024), posso responder sobre:\n"
-            "- Receita, pedidos e clientes por período\n"
-            "- Ranking de lojas, categorias e produtos\n"
-            "- Comparativo 2023 vs 2024\n"
-            "- Ticket médio e variações"
-        )
+        result["answer"] = _oos_response(question)
         return result
 
     ok, reason = validate_sql(sql)
@@ -309,30 +329,23 @@ async def chat(request: ChatRequest):
             "table": r["table"], "kpis": r["kpis"], "error": r["error"],
         }
 
-    # ── Múltiplas perguntas — limitar a 4 para não demorar ─────────────────
+    # ── Múltiplas — paralelo, max 4 ─────────────────────────────────────────
     qs = questions[:4]
+    def run(q): return _process_single(q, history)
 
-    # Executar em paralelo (2 threads simultâneas)
-    def run(q):
-        return _process_single(q, history)
-
-    results = []
+    ordered = [None] * len(qs)
     with ThreadPoolExecutor(max_workers=2) as ex:
-        futures = {ex.submit(run, q): q for q in qs}
-        # Manter ordem
-        ordered = [None] * len(qs)
-        for i, q in enumerate(qs):
-            for f, fq in futures.items():
-                if fq == q:
-                    try: ordered[i] = f.result()
-                    except: ordered[i] = {"question": q, "answer": _error_response(),
-                                           "error": True, "sql": None, "table": None, "kpis": None}
-        results = [r for r in ordered if r]
+        futures = [(i, ex.submit(run, q)) for i, q in enumerate(qs)]
+        for i, f in futures:
+            try: ordered[i] = f.result()
+            except: ordered[i] = {"question": qs[i], "answer": _error_response(),
+                                   "error": True, "sql": None, "table": None, "kpis": None}
 
     parts = []
-    for r in results:
-        title_sec = r.get("display_question") or r["question"].rstrip("?").strip()
-        parts.append(f"**{title_sec}**\n\n{r['answer']}")
+    for r in ordered:
+        if r:
+            title_sec = r.get("display_question") or r["question"].rstrip("?").strip()
+            parts.append(f"**{title_sec}**\n\n{r['answer']}")
 
     conv_title = None
     if is_first and request.generate_title:
@@ -343,7 +356,7 @@ async def chat(request: ChatRequest):
         "answer": "\n\n---\n\n".join(parts),
         "display_question": None, "conversation_title": conv_title,
         "sql": None, "table": None, "kpis": None,
-        "error": any(r.get("error") for r in results),
+        "error": any(r.get("error") for r in ordered if r),
     }
 
 
