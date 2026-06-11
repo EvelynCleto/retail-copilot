@@ -1,4 +1,5 @@
-const BASE_URL = "http://localhost:8000";
+// Em produção usa a URL do Render; em desenvolvimento usa localhost
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 /**
  * sendMessage — consome o endpoint SSE do backend.
