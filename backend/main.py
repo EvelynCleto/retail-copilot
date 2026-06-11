@@ -235,7 +235,7 @@ def _apply_display_map(answer: str) -> str:
 
 def _postprocess(answer: str) -> str:
     """Aplica todos os pós-processamentos na resposta antes de entregar ao frontend."""
-    answer = _postprocess(answer)
+    answer = _apply_display_map(answer)
     answer = _fix_entity_format(answer)
     return answer
 
