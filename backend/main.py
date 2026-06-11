@@ -13,7 +13,12 @@ from database import execute_query, DatabaseError
 from guardrails import validate_sql, is_out_of_scope, is_write_attempt
 from llm import (generate_sql, generate_answer, generate_title,
                  generate_sql_and_rewrite_parallel, generate_strategic_answer,
-                 _get_client, MODEL_MAIN, MAX_TOKENS_ANSWER, MAX_TOKENS_STRATEGIC)
+                 _get_client)
+
+# Constantes de modelo — espelham llm.py
+_MODEL_MAIN          = "claude-sonnet-4-6"
+_MAX_TOKENS_ANSWER   = 900
+_MAX_TOKENS_STRATEGIC = 1200
 from prompt import DISPLAY_MAP
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -235,7 +240,7 @@ def _apply_display_map(answer: str) -> str:
 
 def _postprocess(answer: str) -> str:
     """Aplica todos os pós-processamentos na resposta antes de entregar ao frontend."""
-    answer = _apply_display_map(answer)
+    answer = _postprocess(answer)
     answer = _fix_entity_format(answer)
     return answer
 
@@ -343,8 +348,8 @@ async def chat(request: ChatRequest):
                 full_text = ""
                 # Stream real token a token
                 with client.messages.stream(
-                    model=MODEL_MAIN,
-                    max_tokens=MAX_TOKENS_STRATEGIC,
+                    model=_MODEL_MAIN,
+                    max_tokens=_MAX_TOKENS_STRATEGIC,
                     system=SYSTEM_PROMPT_STRATEGIC,
                     messages=[{"role": "user", "content": message}],
                 ) as stream_ctx:
@@ -401,8 +406,8 @@ async def chat(request: ChatRequest):
                 client = _get_client()
                 full_answer = ""
                 with client.messages.stream(
-                    model=MODEL_MAIN,
-                    max_tokens=MAX_TOKENS_ANSWER,
+                    model=_MODEL_MAIN,
+                    max_tokens=_MAX_TOKENS_ANSWER,
                     system=SYSTEM_PROMPT_ANSWER,
                     messages=[{"role": "user", "content": user_content}],
                 ) as stream_ctx:
