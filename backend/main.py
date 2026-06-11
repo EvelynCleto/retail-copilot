@@ -206,9 +206,38 @@ class ChatRequest(BaseModel):
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
+def _fix_entity_format(text: str) -> str:
+    """
+    Corrige o padrão onde o LLM cola título + entidade na mesma linha/bold.
+    Ex: "**Maior Faturamento por Loja Loja A** R$ 45..." 
+    →   "**Maior Faturamento por Loja**\n\n**Loja A**\n\nR$ 45..."
+    """
+    # Caso 1: **Título Loja X** colado no mesmo bold
+    text = re.sub(
+        r'\*\*([^*]+?)\s+(Loja [A-E])\*\*',
+        r'**\1**\n\n**\2**',
+        text
+    )
+    # Caso 2+3: **Título** **Entidade** → quebra linha antes de qualquer R$ ou texto seguinte
+    text = re.sub(
+        r'(\*\*[^*]+\*\*)\s+(\*\*[^*]{2,35}\*\*)(?=\s+R\$|\s+[A-ZÁÉÍÓÚ0-9])',
+        r'\1\n\n\2\n\n',
+        text
+    )
+    return text
+
+
 def _apply_display_map(answer: str) -> str:
     pattern = r'\b(' + '|'.join(re.escape(k) for k in DISPLAY_MAP.keys()) + r')\b'
-    return re.sub(pattern, lambda m: DISPLAY_MAP.get(m.group(0), m.group(0)), answer)
+    answer = re.sub(pattern, lambda m: DISPLAY_MAP.get(m.group(0), m.group(0)), answer)
+    return answer
+
+
+def _postprocess(answer: str) -> str:
+    """Aplica todos os pós-processamentos na resposta antes de entregar ao frontend."""
+    answer = _postprocess(answer)
+    answer = _fix_entity_format(answer)
+    return answer
 
 def _extract_kpis(rows):
     if not rows or len(rows) != 1: return None
@@ -323,7 +352,7 @@ async def chat(request: ChatRequest):
                         full_text += text
                         yield sse_token(text)
 
-                full_text = _apply_display_map(full_text)
+                full_text = _postprocess(full_text)
                 title = generate_title(message) if is_first and request.generate_title else None
                 yield sse_done({"answer": full_text, "display_question": None,
                                 "conversation_title": title, "sql": None, "table": None,
@@ -381,7 +410,7 @@ async def chat(request: ChatRequest):
                         full_answer += text
                         yield sse_token(text)
 
-                full_answer = _apply_display_map(full_answer)
+                full_answer = _postprocess(full_answer)
                 title = None
                 if is_first and request.generate_title:
                     try: title = generate_title(message)
@@ -412,7 +441,7 @@ async def chat(request: ChatRequest):
                         return {"question": q, "answer": _error_payload()["answer"], "error": True, "sql": None, "table": None, "kpis": None}
                     rows = execute_query(sql)
                     answer = generate_answer(q, sql, rows)
-                    answer = _apply_display_map(answer)
+                    answer = _postprocess(answer)
                     return {"question": q, "answer": answer, "error": False, "sql": sql,
                             "table": _build_table(rows), "kpis": _extract_kpis(rows)}
                 except Exception:
