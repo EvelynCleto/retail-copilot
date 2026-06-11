@@ -135,7 +135,7 @@ export default function App() {
     setUsed(p => new Set([...p, q]));
     upd(active, c => ({ ...c, messages: [...c.messages, { role: "user", content: q, displayContent: q }] }));
     setLoading(true);
-    startPhases();
+   // startPhases();
 
     try {
       // Resetar streaming antes de iniciar
@@ -169,7 +169,7 @@ export default function App() {
         }],
       }));
     } finally {
-      stopPhases();
+    //  stopPhases();
       setLoading(false);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
