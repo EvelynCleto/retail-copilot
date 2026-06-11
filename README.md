@@ -1,250 +1,302 @@
+````md
 # Retail Insights
 
-**Copiloto executivo de análise de vendas no varejo**, desenvolvido para a Linx como resposta ao desafio Applied AI Product Specialist.
+<p align="center">
 
-O sistema recebe perguntas em português, gera SQL via LLM, executa no banco SQLite e devolve respostas executivas estruturadas — com tabelas, cards de KPI e insights visuais.
+# AI-Powered Retail Analytics Copilot
 
----
+Built for the **Linx Applied AI Product Specialist Challenge**
 
-## Demo rápido
+Transform natural language questions into executive insights using **Claude + FastAPI + React + SQLite**.
 
-```
-Você:  Qual loja teve o maior faturamento?
+<br>
 
-RI:    Loja A
-       R$ 45.383.244,35
-       Representa 30,8% da receita total do período.
-```
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python)
+![Claude](https://img.shields.io/badge/Claude-Sonnet_4.6-orange)
+![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?logo=sqlite)
+![Vercel](https://img.shields.io/badge/Vercel-Deployed-black?logo=vercel)
 
-```
-Você:  Quais as 5 categorias que mais venderam em 2023?
-
-RI:    🥇 CALÇA   — R$ 25.210.215,10 · 33,9%
-       🥈 VESTIDO — R$ 17.178.522,10 · 23,1%
-       🥉 CASACO  — R$ 13.248.183,30 · 17,8%
-       4. CAMISA  — R$  9.701.588,80 · 13,0%
-       5. SAIA    — R$  9.003.417,49 · 12,1%
-```
+</p>
 
 ---
 
-## Pré-requisitos
+# 🚀 Live Demo
 
-| Requisito | Versão mínima |
-|---|---|
-| Python | 3.11+ |
-| Node.js | 18+ |
-| Chave Anthropic | [console.anthropic.com](https://console.anthropic.com) |
+### Web application
+
+> **https://retail-copilot-five.vercel.app/**
+
+No installation required.
+
+Simply open the link and start asking questions in Portuguese.
+
+### Example questions
+
+- Qual loja teve o maior faturamento?
+- Quais categorias mais venderam em 2024?
+- Qual foi o ticket médio por pedido?
+- Faça um resumo executivo do período
+- Gere um briefing para o CEO
 
 ---
 
-## Instalação e execução
+# ✨ Overview
 
-### 1 · Backend
+Retail Insights allows business users to explore retail sales data conversationally.
+
+The system:
+
+- Converts questions into SQL using Claude
+- Executes queries against SQLite
+- Applies SQL guardrails
+- Returns executive answers in Portuguese
+- Generates KPI cards and ranking tables
+- Produces deterministic CEO briefings
+
+---
+
+# 🎯 Features
+
+## Conversational analytics
+
+Ask questions in natural language.
+
+---
+
+## Executive briefing
+
+Deterministic CEO summary built without LLM hallucinations.
+
+---
+
+## KPI cards
+
+Visual comparison between 2023 and 2024.
+
+---
+
+## Ranking tables
+
+Top products, categories and stores.
+
+---
+
+## SQL transparency
+
+Expandable section showing how every answer was calculated.
+
+---
+
+## Conversation management
+
+- Rename conversations
+- Pin conversations
+- Delete conversations
+
+---
+
+## Export
+
+- TXT
+- PDF
+- Copy to clipboard
+
+---
+
+# 🏗 Architecture
+
+```text
+                React + Vite
+                       │
+                       ▼
+                  FastAPI API
+                       │
+                       ▼
+               Claude Sonnet 4.6
+                       │
+                       ▼
+                 SQL Guardrails
+                       │
+                       ▼
+                     SQLite
+````
+
+---
+
+# ⚙ Tech Stack
+
+| Layer      | Technology        |
+| ---------- | ----------------- |
+| Frontend   | React + Vite      |
+| Backend    | FastAPI           |
+| LLM        | Claude Sonnet 4.6 |
+| Database   | SQLite            |
+| Markdown   | react-markdown    |
+| Styling    | CSS               |
+| Deployment | Vercel + Render   |
+
+---
+
+# 📊 Dataset
+
+| Metric     |     Value |
+| ---------- | --------: |
+| Rows       |    90,559 |
+| Stores     |         5 |
+| Categories |         5 |
+| Products   |     1,768 |
+| Customers  |    18,635 |
+| Period     | 2023–2024 |
+
+---
+
+# 🧠 Design Decisions
+
+## Split prompts
+
+Two independent prompts:
+
+1. SQL generation
+2. Executive answer generation
+
+This separation improves maintainability and reduces hallucinations.
+
+---
+
+## Parallel execution
+
+SQL generation and title generation run simultaneously using ThreadPoolExecutor.
+
+This saves approximately **600–900 ms** per request.
+
+---
+
+## SQL guardrails
+
+Only SELECT statements are allowed.
+
+Blocked operations:
+
+* INSERT
+* UPDATE
+* DELETE
+* DROP
+
+---
+
+## Deterministic CEO briefing
+
+The **Briefing CEO** feature bypasses the LLM and executes predefined SQLite queries directly.
+
+This guarantees consistency and eliminates hallucinations.
+
+---
+
+# ✅ Validation
+
+Six mandatory questions are automatically tested.
 
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate       # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
 
-cp .env.example .env
-# Edite .env e adicione: ANTHROPIC_API_KEY=sk-ant-...
-
-uvicorn main:app --reload
-# → http://localhost:8000
-```
-
-### 2 · Frontend
-
-Em outro terminal:
-
-```bash
-cd frontend
-npm install
-npm run dev
-# → http://localhost:5173
-```
-
-Abra **http://localhost:5173** no navegador.
-
----
-
-## Validação automática — 6 perguntas obrigatórias
-
-Com o backend rodando:
-
-```bash
-cd backend
 python test_eval.py
 ```
 
-Resultado esperado: **6/6 perguntas aprovadas**.
+Expected result:
 
-As 6 perguntas validadas e seus valores esperados:
-
-| # | Pergunta | Valor esperado |
-|---|---|---|
-| Q1 | Receita total em 2024 | R$ 73.067.913,20 |
-| Q2 | Top 5 categorias em 2023 | CALÇA, VESTIDO, CASACO, CAMISA, SAIA |
-| Q3 | Comparativo 2023 × 2024 | R$ 74.341.926,79 → R$ 73.067.913,20 (-1,7%) |
-| Q4 | Loja com maior faturamento | Loja A — R$ 45.383.244,35 |
-| Q5 | Unidades vendidas por mês em 2024 | 12 linhas, total 43.368 unidades |
-| Q6 | Ticket médio por pedido | R$ 2.961,58 |
-
----
-
-## Arquitetura
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                          Navegador                              │
-│                                                                 │
-│   React + Vite                                                  │
-│   ConversationSidebar · MessageBubble · RankingTable            │
-│   KpiCards · ChatActions · SqlBlock                             │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ HTTP POST /chat
-┌───────────────────────────▼─────────────────────────────────────┐
-│                      FastAPI (Python)                           │
-│                                                                 │
-│   main.py ─── split_questions() ─── CEO determinístico         │
-│      │                                                          │
-│      ├── llm.py ── generate_sql()  ──┐  paralelo               │
-│      │            rewrite_question() ─┘  ThreadPoolExecutor    │
-│      │                                                          │
-│      ├── guardrails.py ── validate_sql() (SELECT-only)         │
-│      ├── database.py ─── execute_query() (SQLite)              │
-│      └── llm.py ────── generate_answer()                       │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │
-┌───────────────────────────▼─────────────────────────────────────┐
-│                     vendas.db (SQLite)                          │
-│   90.559 linhas · 5 lojas · 5 categorias · 1.768 produtos      │
-│   18.635 clientes · período: 2023-01-02 a 2024-12-31            │
-└─────────────────────────────────────────────────────────────────┘
+```text
+6/6 tests passed
 ```
 
 ---
 
-## Stack técnica
+# 📂 Project Structure
 
-| Camada | Tecnologia | Versão | Decisão |
-|---|---|---|---|
-| Backend | Python + FastAPI | 3.11 / 0.115 | `sqlite3` nativo, async, setup mínimo |
-| LLM | Claude Sonnet 4.6 (Anthropic) | `claude-sonnet-4-6` | Melhor precisão SQL + custo em português |
-| Banco | SQLite (`vendas.db`) | — | Sem servidor, leitura direta, 90k linhas |
-| Frontend | React + Vite | 19 / 8 | Sem framework pesado, componentes focados |
-| Markdown | react-markdown + remark-gfm | — | Renderização de tabelas e listas da IA |
-
----
-
-## Decisões de design
-
-### Dois prompts LLM separados
-
-O primeiro prompt tem responsabilidade única: **gerar SQL válido**. O segundo tem outra: **verbalizar a resposta em português executivo**. Misturar os dois aumenta a taxa de erro e dificulta manutenção.
-
-```
-Pergunta → [SQL Prompt] → SQL → banco → rows → [Answer Prompt] → resposta
-```
-
-### SQL e reformulação em paralelo
-
-`generate_sql_and_rewrite_parallel()` usa `ThreadPoolExecutor(max_workers=2)` para rodar geração de SQL e reformulação de título em paralelo. Economia de ~600–900ms por request.
-
-### Guardrail antes de executar
-
-Todo SQL gerado passa por validação antes de tocar o banco:
-- Deve começar com `SELECT`
-- Sem palavras-chave de escrita (`INSERT`, `UPDATE`, `DELETE`, `DROP`, etc.)
-- Sem múltiplos statements
-
-### CEO determinístico
-
-O botão "Briefing CEO" nunca passa pelo LLM. Executa 17 queries SQLite fixas e monta o briefing com Python puro — zero chance de falha ou alucinação.
-
-### Schema + exemplos concretos no prompt SQL
-
-O `SYSTEM_PROMPT_SQL` inclui:
-- Schema completo com tipos e valores possíveis
-- Mapeamento linguagem → SQL (ex: "qual loja liderou" → `GROUP BY loja ... LIMIT 1`)
-- Os dois erros mais comuns documentados explicitamente: `SUM(receita * quantidade)` (errado) e `AVG(receita)` para ticket médio (errado)
-- Aliases obrigatórios para evitar nomes inventados pelo LLM
-- SQL correto para cada uma das 6 perguntas com o resultado esperado como comentário
-
-### Resposta da pergunta original preservada
-
-A reformulação da pergunta via LLM é usada **apenas** para o título automático da conversa na sidebar. A bolha do usuário sempre exibe o texto exatamente como digitado.
-
----
-
-## Funcionalidades do produto
-
-| Funcionalidade | Descrição |
-|---|---|
-| **Chat conversacional** | Contexto de múltiplas trocas, memória dentro da sessão |
-| **Sidebar de histórico** | Conversas nomeadas automaticamente, fixar, renomear, excluir |
-| **Tabelas de ranking** | Medalhas 🥇🥈🥉, barras de proporção, totalizador, zebra striping |
-| **Cards de KPI** | Comparativo 2023 × 2024 com sparkline e delta badge |
-| **Briefing CEO** | Resumo executivo determinístico, nunca falha |
-| **Exportar conversa** | Download `.txt`, `.pdf` (layout profissional), copiar texto |
-| **Ver SQL** | Expansão discreta de como cada resposta foi calculada |
-| **Sugestões contextuais** | Chips baseados no tópico atual da conversa |
-| **Identidade Linx** | Design system com laranja `#F5691E` e dark sidebar `#0E1117` |
-
----
-
-## Estrutura do projeto
-
-```
-retail-insights/
+```text
+retail-insights
 │
-├── backend/
-│   ├── main.py           # FastAPI, endpoint POST /chat, CEO determinístico
-│   ├── llm.py            # Claude API: SQL, answer, title, rewrite (paralelo)
-│   ├── database.py       # SQLite executor
-│   ├── guardrails.py     # Validação SELECT-only
-│   ├── prompt.py         # SYSTEM_PROMPT_SQL + SYSTEM_PROMPT_ANSWER + DISPLAY_MAP
-│   ├── test_eval.py      # Validação das 6 perguntas obrigatórias
+├── backend
+│   ├── main.py
+│   ├── llm.py
+│   ├── database.py
+│   ├── guardrails.py
+│   ├── prompt.py
+│   ├── test_eval.py
 │   ├── requirements.txt
-│   ├── .env.example
-│   └── vendas.db         # SQLite — 90.559 linhas, 2023–2024
+│   └── vendas.db
 │
-└── frontend/
-    ├── src/
-    │   ├── App.jsx                    # Orquestrador: estado, conversas, send
-    │   ├── api.js                     # fetch POST /chat
-    │   ├── index.css                  # Design system (CSS vars Linx)
-    │   ├── main.jsx
-    │   └── components/
-    │       ├── ConversationSidebar.jsx  # Sidebar com menu hover (renomear/fixar/excluir)
-    │       ├── MessageBubble.jsx        # Renderização de mensagens com Markdown
-    │       ├── RankingTable.jsx         # Tabela premium: medalhas, barras, totalizador
-    │       ├── KpiCards.jsx             # Cards 2023×2024 com sparkline
-    │       ├── ChatActions.jsx          # Menu ⋯: exportar TXT/PDF, copiar
-    │       └── SqlBlock.jsx             # "Como foi calculado" expansível
-    ├── index.html
+└── frontend
+    ├── src
+    ├── components
     ├── package.json
     └── vite.config.js
 ```
 
 ---
 
-## Variáveis de ambiente
+# 🔧 Running Locally
 
-| Variável | Obrigatória | Descrição |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | ✅ | Chave da API Anthropic |
+## Backend
+
+```bash
+cd backend
+
+python -m venv .venv
+
+pip install -r requirements.txt
+
+uvicorn main:app --reload
+```
 
 ---
 
-## O que evoluiria com mais tempo
+## Frontend
 
-- **Streaming** das respostas para UX mais responsiva (Claude suporta via SSE)
-- **Cache de queries** idênticas para reduzir latência e custo de API
-- **Gráficos interativos** automáticos para séries temporais (Recharts/Chart.js)
-- **Eval em CI** usando as 6 perguntas como suite de testes automatizada
-- **Persistência de histórico** no backend (hoje é só memória de sessão no frontend)
-- **Multi-tenant** para múltiplos varejistas com seus próprios bancos
-- **Upload de arquivo** para permitir análise de qualquer `vendas.db`
+```bash
+cd frontend
+
+npm install
+
+npm run dev
+```
+
+---
+
+# 🔐 Environment Variables
+
+| Variable          | Required |
+| ----------------- | -------- |
+| ANTHROPIC_API_KEY | ✅        |
+
+---
+
+# 📈 Future Improvements
+
+* Streaming responses
+* Query cache
+* Interactive charts
+* CI evaluation suite
+* Persistent conversations
+* Multi-tenant support
+* Upload custom databases
+
+---
+
+# 👩‍💻 Author
+
+### Evelyn Cleto
+
+Built for the **Linx Applied AI Product Specialist Challenge**.
+
+---
+
+## ⭐ Try it
+
+### https://retail-copilot-five.vercel.app/
+
+If you found this project interesting, feel free to give it a ⭐.
+
+```
+```
