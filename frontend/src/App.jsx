@@ -117,7 +117,13 @@ export default function App() {
   const msgs = conv?.messages || [];
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, loading]);
-  useEffect(() => { if (msgs.length > 0) setChipList(getChips(used, msgs)); }, [msgs]);
+  useEffect(() => {
+    if (msgs.length > 0) {
+      setChipList(getChips(used, msgs));
+      // Após 4 mensagens, colapsar automaticamente
+      if (msgs.length >= 4) setChipsVisible(false);
+    }
+  }, [msgs]);
 
   const startPhases = () => {
     ptimers.current.forEach(clearTimeout);
@@ -187,7 +193,7 @@ export default function App() {
   const pinChat    = id      => setConvs(p => p.map(c => c.id === id ? { ...c, pinned: !c.pinned } : c));
 
   const isEmpty   = msgs.length === 0;
-  const showChips = !isEmpty && !loading && !input.trim();
+  const showChips = !isEmpty && !loading;
 
   return (
     <div style={s.root}>
@@ -215,7 +221,11 @@ export default function App() {
         </main>
         <Footer ref={inputRef} input={input} setInput={setInput}
           onSend={send} loading={loading}
-          chips={showChips ? chipList : []} isEmpty={isEmpty} />
+          chips={showChips && !input.trim() ? chipList : []}
+          chipsVisible={chipsVisible}
+          onToggleChips={() => setChipsVisible(v => !v)}
+          hasChips={showChips && chipList.length > 0}
+          isEmpty={isEmpty} />
       </div>
     </div>
   );
@@ -355,23 +365,33 @@ const th = {
 };
 
 /* ── Footer / Input ──────────────────────────────────────────────── */
-const Footer = forwardRef(function Footer({ input, setInput, onSend, loading, chips, isEmpty }, ref) {
+const Footer = forwardRef(function Footer(
+  { input, setInput, onSend, loading, chips, chipsVisible, onToggleChips, hasChips, isEmpty }, ref
+) {
   const key = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } };
   return (
     <footer style={{ ...ft.foot, ...(isEmpty ? ft.empty : {}) }}>
-      {chips.length > 0 && (
+      {/* Barra de sugestões com toggle */}
+      {hasChips && !isEmpty && (
         <div style={ft.chipsWrap}>
-          <span style={ft.chipsLabel}>Sugestões</span>
-          <div style={ft.chips}>
-            {chips.map((chip, i) => (
-              <button key={chip} style={{...ft.chip, animationDelay:`${i*40}ms`}}
-                className="suggestion-chip"
-                onClick={() => onSend(chip)} disabled={loading}>
-                <span style={ft.chipArrow}>↗</span>
-                {chip}
-              </button>
-            ))}
+          <div style={ft.chipsHeader}>
+            <span style={ft.chipsLabel}>Sugestões</span>
+            <button style={ft.chipsToggle} onClick={onToggleChips} title={chipsVisible ? "Ocultar sugestões" : "Mostrar sugestões"}>
+              {chipsVisible ? "−" : "+"}
+            </button>
           </div>
+          {chipsVisible && chips.length > 0 && (
+            <div style={ft.chips}>
+              {chips.map((chip, i) => (
+                <button key={chip} style={{...ft.chip, animationDelay:`${i*35}ms`}}
+                  className="suggestion-chip"
+                  onClick={() => onSend(chip)} disabled={loading}>
+                  <span style={ft.chipArrow}>→</span>
+                  {chip}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
       <div style={ft.row}>
@@ -395,19 +415,23 @@ const ft = {
   foot:  { background:"var(--surface)", borderTop:"1px solid var(--border)",
            padding:"8px 22px 13px", flexShrink:0 },
   empty: { background:"transparent", borderTop:"none" },
-  chipsWrap: { maxWidth:760, margin:"0 auto 6px" },
-  chipsLabel:{ fontSize:9.5, fontWeight:700, color:"var(--text-disabled)",
-               textTransform:"uppercase", letterSpacing:"0.1em",
-               display:"block", marginBottom:5 },
+  chipsWrap:   { maxWidth:760, margin:"0 auto 6px" },
+  chipsHeader: { display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 },
+  chipsLabel:  { fontSize:9.5, fontWeight:700, color:"var(--text-disabled)",
+                 textTransform:"uppercase", letterSpacing:"0.1em" },
+  chipsToggle: { background:"none", border:"none", cursor:"pointer",
+                 fontSize:14, color:"var(--text-muted)", fontFamily:"inherit",
+                 padding:"0 4px", lineHeight:1, fontWeight:400,
+                 transition:"color .12s" },
   chips: { display:"flex", gap:5, flexWrap:"wrap" },
-  chip:  { display:"inline-flex", alignItems:"center", gap:4,
+  chip:  { display:"inline-flex", alignItems:"center", gap:5,
            background:"var(--surface)", border:"1px solid var(--border)",
-           borderRadius:20, padding:"4px 11px 4px 8px",
+           borderRadius:20, padding:"4px 12px 4px 9px",
            fontSize:11.5, color:"var(--text-secondary)", cursor:"pointer",
            fontFamily:"inherit", whiteSpace:"nowrap",
-           transition:"border-color .13s, color .13s, background .13s, box-shadow .13s",
+           transition:"border-color .13s, color .13s, background .13s",
            opacity:0, animation:"fadeUp .2s var(--ease) forwards" },
-  chipArrow:{ fontSize:9, color:"var(--linx)", flexShrink:0, opacity:0.6 },
+  chipArrow:{ fontSize:9, color:"var(--linx)", flexShrink:0, opacity:0.7 },
   row:   { maxWidth:760, margin:"0 auto", display:"flex", gap:8, alignItems:"flex-end" },
   ta:    { flex:1, border:"1px solid var(--border)", borderRadius:14,
            padding:"10px 17px", fontSize:13.5, fontFamily:"inherit",

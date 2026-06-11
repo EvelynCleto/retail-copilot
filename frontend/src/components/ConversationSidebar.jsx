@@ -6,7 +6,7 @@ const ChevL     = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="no
 const BubbleIco = ({ active }) => (
   <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
-      stroke={active ? "var(--linx)" : "#6B7280"} strokeWidth="1.8"
+      stroke={active ? "#F5691E" : "#6B7280"} strokeWidth="1.8"
       strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
@@ -14,7 +14,7 @@ const EditIco  = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="non
 const PinIco   = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 2l3 6h6l-5 4 2 6-6-4-6 4 2-6-5-4h6z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 const TrashIco = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
 
-/* ─── Dropdown menu ──────────────────────────────────────────────── */
+/* ─── Dropdown ───────────────────────────────────────────────────── */
 function Menu({ conv, onRename, onPin, onDelete, onClose }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -23,19 +23,12 @@ function Menu({ conv, onRename, onPin, onDelete, onClose }) {
     return () => document.removeEventListener("mousedown", h);
   }, [onClose]);
 
-  const stop = e => e.stopPropagation();
   return (
-    <div ref={ref} style={mn.wrap} onMouseDown={stop}>
-      <button style={mn.item} onClick={() => { onRename(); onClose(); }}>
-        <EditIco /> Renomear
-      </button>
-      <button style={mn.item} onClick={() => { onPin(); onClose(); }}>
-        <PinIco /> {conv.pinned ? "Desafixar" : "Fixar no topo"}
-      </button>
+    <div ref={ref} style={mn.wrap} onMouseDown={e => e.stopPropagation()}>
+      <button style={mn.item} onClick={() => { onRename(); onClose(); }}><EditIco /> Renomear</button>
+      <button style={mn.item} onClick={() => { onPin(); onClose(); }}><PinIco /> {conv.pinned ? "Desafixar" : "Fixar no topo"}</button>
       <div style={mn.sep} />
-      <button style={{ ...mn.item, ...mn.danger }} onClick={() => { onDelete(); onClose(); }}>
-        <TrashIco /> Excluir
-      </button>
+      <button style={{ ...mn.item, ...mn.danger }} onClick={() => { onDelete(); onClose(); }}><TrashIco /> Excluir</button>
     </div>
   );
 }
@@ -46,12 +39,12 @@ const mn = {
             minWidth:156, overflow:"hidden", padding:"3px 0" },
   item:   { display:"flex", alignItems:"center", gap:8, width:"100%", padding:"8px 14px",
             background:"none", border:"none", color:"#C1C9D6", fontSize:12.5,
-            fontFamily:"'Inter',sans-serif", cursor:"pointer", textAlign:"left" },
+            fontFamily:"inherit", cursor:"pointer", textAlign:"left" },
   danger: { color:"#F87171" },
   sep:    { height:1, background:"rgba(255,255,255,0.07)", margin:"3px 0" },
 };
 
-/* ─── Conv item ──────────────────────────────────────────────────── */
+/* ─── ConvItem ───────────────────────────────────────────────────── */
 function ConvItem({ conv, active, onSelect, onRename, onPin, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing]   = useState(false);
@@ -78,12 +71,13 @@ function ConvItem({ conv, active, onSelect, onRename, onPin, onDelete }) {
   return (
     <div style={{ position:"relative" }} className="conv-item-wrap">
       <button
-        className="conv-btn"
-        style={{ ...ci.btn, ...(active ? ci.active : {}) }}
+        className={`conv-btn ${active ? "conv-active" : ""}`}
+        style={ci.btn}
         onClick={onSelect}
       >
         <BubbleIco active={active} />
-        <span style={ci.label} title={conv.title}>
+        <span style={{ ...ci.label, color: active ? "#FFFFFF" : "#9CA3AF" }}
+          title={conv.title}>
           {conv.pinned && <span style={{ fontSize:9, marginRight:3 }}>📌</span>}
           {conv.title}
         </span>
@@ -106,10 +100,9 @@ const ci = {
   btn: { width:"100%", display:"flex", alignItems:"center", gap:7,
          padding:"7px 9px", borderRadius:8, border:"none",
          background:"transparent", cursor:"pointer",
-         color:"var(--sidebar-text)", fontSize:12.5,
-         fontFamily:"'Inter',sans-serif", textAlign:"left" },
-  active:{ background:"var(--sidebar-active) !important", color:"var(--sidebar-text-active)" },
-  label: { flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontSize:12.5 },
+         color:"#9CA3AF", fontSize:12.5,
+         fontFamily:"inherit", textAlign:"left" },
+  label: { flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
   dot:   { background:"none", border:"none", cursor:"pointer",
            color:"#6B7280", fontSize:16, padding:"0 2px",
            lineHeight:0.8, flexShrink:0, opacity:0,
@@ -117,7 +110,7 @@ const ci = {
   editInput: { width:"100%", padding:"5px 8px",
                background:"rgba(255,255,255,0.1)", border:"1px solid rgba(255,255,255,0.22)",
                borderRadius:6, color:"#E2E8F0", fontSize:12.5,
-               fontFamily:"'Inter',sans-serif", outline:"none" },
+               fontFamily:"inherit", outline:"none" },
 };
 
 /* ─── Sidebar ────────────────────────────────────────────────────── */
@@ -135,10 +128,10 @@ export default function ConversationSidebar({
         <div style={sb.brand}>
           <div style={sb.logoBox}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <rect x="2" y="2" width="9" height="9" rx="2" fill="var(--linx)" opacity=".9"/>
-              <rect x="13" y="2" width="9" height="9" rx="2" fill="var(--linx)" opacity=".55"/>
-              <rect x="2" y="13" width="9" height="9" rx="2" fill="var(--linx)" opacity=".55"/>
-              <rect x="13" y="13" width="9" height="9" rx="2" fill="var(--linx)" opacity=".25"/>
+              <rect x="2" y="2" width="9" height="9" rx="2" fill="#F5691E" opacity=".9"/>
+              <rect x="13" y="2" width="9" height="9" rx="2" fill="#F5691E" opacity=".55"/>
+              <rect x="2" y="13" width="9" height="9" rx="2" fill="#F5691E" opacity=".55"/>
+              <rect x="13" y="13" width="9" height="9" rx="2" fill="#F5691E" opacity=".25"/>
             </svg>
           </div>
           <span style={sb.brandName}>Retail Insights</span>
@@ -173,7 +166,7 @@ export default function ConversationSidebar({
         ))}
       </div>
 
-      {/* Footer */}
+      {/* Footer com metadados */}
       <div style={sb.footer}>
         <div style={sb.footTop}>
           <span style={sb.footDot} />
@@ -183,26 +176,20 @@ export default function ConversationSidebar({
           <div style={sb.footRow}><span style={sb.footKey}>Período</span><span style={sb.footVal}>2023 – 2024</span></div>
           <div style={sb.footRow}><span style={sb.footKey}>Registros</span><span style={sb.footVal}>90.559</span></div>
           <div style={sb.footRow}><span style={sb.footKey}>Lojas</span><span style={sb.footVal}>A, B, C, D, E</span></div>
-          <div style={sb.footRow}><span style={sb.footKey}>Categorias</span><span style={sb.footVal}>5</span></div>
-          <div style={sb.footRow}><span style={sb.footKey}>Produtos</span><span style={sb.footVal}>1.768</span></div>
+          <div style={sb.footRow}><span style={sb.footKey}>Categorias</span><span style={sb.footVal}>5 · 1.768 produtos</span></div>
         </div>
       </div>
 
-      <style>{`
-        .conv-btn:hover { background: rgba(255,255,255,0.055) !important; }
-        .conv-item-wrap:hover .conv-dot-btn { opacity: 1 !important; }
-        [style*="var(--sidebar-active)"] { background: rgba(245,105,30,0.18) !important; color: #F5F6F8 !important; }
-        .conv-btn.active-conv { background: rgba(245,105,30,0.18) !important; color: #F5F6F8 !important; }
-      `}</style>
+      <style>{css}</style>
     </div>
   );
 }
 
 const sb = {
   root:      { position:"fixed", top:0, left:0, bottom:0, width:252,
-               background:"var(--sidebar)", display:"flex", flexDirection:"column",
-               borderRight:"1px solid var(--sidebar-border)",
-               transition:"transform .2s var(--ease)", zIndex:100 },
+               background:"#0E1117", display:"flex", flexDirection:"column",
+               borderRight:"1px solid rgba(255,255,255,0.06)",
+               transition:"transform .2s cubic-bezier(.25,.1,.25,1)", zIndex:100 },
   header:    { display:"flex", alignItems:"center", justifyContent:"space-between",
                padding:"14px 12px 8px", flexShrink:0 },
   brand:     { display:"flex", alignItems:"center", gap:10 },
@@ -215,19 +202,32 @@ const sb = {
   newBtn:    { margin:"4px 10px 10px", padding:"8px 12px",
                background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.09)",
                borderRadius:9, cursor:"pointer", display:"flex", alignItems:"center", gap:7,
-               color:"#C1C9D6", fontSize:12.5, fontFamily:"'Inter',sans-serif",
-               flexShrink:0, transition:"background .12s" },
-  list:      { flex:1, overflowY:"auto", padding:"0 6px", overflowX:"visible" },
+               color:"#C1C9D6", fontSize:12.5, fontFamily:"inherit", flexShrink:0 },
+  list:      { flex:1, overflowY:"auto", padding:"0 6px" },
   groupLabel:{ fontSize:9.5, fontWeight:800, color:"#374151",
                textTransform:"uppercase", letterSpacing:"0.1em", padding:"6px 7px 3px" },
-  footer:    { padding:"11px 12px 13px", borderTop:"1px solid var(--sidebar-border)",
-               flexShrink:0 },
+  footer:    { padding:"11px 12px 13px", borderTop:"1px solid rgba(255,255,255,0.06)", flexShrink:0 },
   footTop:   { display:"flex", alignItems:"center", gap:6, marginBottom:9 },
   footDot:   { width:6, height:6, borderRadius:"50%", background:"#22C55E",
                boxShadow:"0 0 0 2px rgba(34,197,94,.2)", flexShrink:0 },
-  footStatus:{ color:"#4B5563", fontSize:11, fontWeight:500 },
-  footMeta:  { display:"flex", flexDirection:"column", gap:3 },
+  footStatus:{ color:"#6B7280", fontSize:11, fontWeight:500 },
+  footMeta:  { display:"flex", flexDirection:"column", gap:4 },
   footRow:   { display:"flex", justifyContent:"space-between", alignItems:"center" },
-  footKey:   { fontSize:10, color:"#374151", fontWeight:500 },
+  footKey:   { fontSize:10, color:"#4B5563", fontWeight:500 },
   footVal:   { fontSize:10, color:"#6B7280" },
 };
+
+const css = `
+  /* Conversa ativa: branco legível sobre fundo escuro */
+  .conv-active { background: rgba(255,255,255,0.10) !important; }
+  .conv-active span { color: #FFFFFF !important; }
+
+  /* Hover nas conversas */
+  .conv-btn:not(.conv-active):hover { background: rgba(255,255,255,0.05) !important; }
+
+  /* Botão ··· aparece no hover do item */
+  .conv-item-wrap:hover .conv-dot-btn { opacity: 1 !important; }
+
+  /* Footer hover */
+  .conv-btn:hover .conv-dot-btn { opacity: 1 !important; }
+`;

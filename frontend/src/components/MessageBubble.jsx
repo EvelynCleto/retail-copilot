@@ -14,18 +14,15 @@ function CopyBtn({ text }) {
   };
   return (
     <button onClick={go} style={ac.btn} title="Copiar resposta">
-      {ok
-        ? <><CheckIco/><span style={{ color:"var(--green)" }}>Copiado</span></>
-        : <><CopyIco/><span>Copiar</span></>
-      }
+      {ok ? <><CheckIco/><span style={{color:"var(--green)"}}>Copiado</span></> 
+          : <><CopyIco/><span>Copiar</span></>}
     </button>
   );
 }
 const ac = {
-  btn: { display:"inline-flex", alignItems:"center", gap:5,
-         background:"none", border:"none", cursor:"pointer",
-         fontSize:11, color:"var(--text-muted)", fontFamily:"inherit",
-         padding:"4px 0", transition:"color 0.13s" },
+  btn: { display:"inline-flex", alignItems:"center", gap:5, background:"none", border:"none",
+         cursor:"pointer", fontSize:11, color:"var(--text-muted)", fontFamily:"inherit",
+         padding:"4px 0", transition:"color .13s" },
 };
 
 /* ── Insight extractor ─────────────────────────────────────────── */
@@ -37,7 +34,7 @@ function getInsight(content) {
   return last.length > 18 ? last : null;
 }
 
-/* ── Markdown components ───────────────────────────────────────── */
+/* ── Markdown renderers ────────────────────────────────────────── */
 const MD = {
   h1: ({ children }) => <h1 style={md.h1}>{children}</h1>,
   h2: ({ children }) => <h2 style={md.h2}>{children}</h2>,
@@ -52,9 +49,7 @@ const MD = {
   code:      ({ children }) => <code   style={md.code}>{children}</code>,
   hr:        ()             => <hr     style={md.hr}/>,
   blockquote:({ children }) => <blockquote style={md.bq}>{children}</blockquote>,
-  table: ({ children }) => (
-    <div style={md.tWrap}><table style={md.t}>{children}</table></div>
-  ),
+  table: ({ children }) => <div style={md.tWrap}><table style={md.t}>{children}</table></div>,
   thead: ({ children }) => <thead style={md.thead}>{children}</thead>,
   th:    ({ children }) => <th style={md.th}>{children}</th>,
   td:    ({ children }) => <td style={md.td}>{children}</td>,
@@ -63,6 +58,7 @@ const MD = {
 
 /* ── Component ─────────────────────────────────────────────────── */
 export default function MessageBubble({ message, isNew }) {
+  // Bolha do usuário — sempre texto original, nunca reformulado
   if (message.role === "user") {
     return (
       <div style={s.userRow} className={isNew ? "msg-new" : ""}>
@@ -79,11 +75,15 @@ export default function MessageBubble({ message, isNew }) {
     <div style={s.asstRow} className={isNew ? "msg-new" : ""}>
       <div style={s.av}>RI</div>
       <div style={s.body}>
+
+        {/* KPI cards — aparecem antes de tudo */}
         {hasKpis && <KpiCards kpis={message.kpis}/>}
 
+        {/* Quando há tabela: APENAS tabela + insight no rodapé. SEM texto duplicado */}
         {hasTable
           ? <RankingTable data={message.table} insight={insight || undefined}/>
           : (
+            /* Sem tabela: texto completo */
             <div style={{ ...s.bubble, ...(message.error ? s.err : {}) }}>
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD}>
                 {message.content}
@@ -92,6 +92,7 @@ export default function MessageBubble({ message, isNew }) {
           )
         }
 
+        {/* Ações: copiar + ver fonte */}
         <div style={s.actions}>
           <CopyBtn text={message.content}/>
           {message.sql && <SqlBlock sql={message.sql}/>}
@@ -101,7 +102,7 @@ export default function MessageBubble({ message, isNew }) {
   );
 }
 
-/* ── Layout ────────────────────────────────────────────────────── */
+/* ── Styles ────────────────────────────────────────────────────── */
 const s = {
   userRow: { display:"flex", justifyContent:"flex-end", marginBottom:8 },
   userBub: {
@@ -109,25 +110,25 @@ const s = {
     padding:"9px 16px", borderRadius:"16px 16px 3px 16px",
     maxWidth:"60%", fontSize:13, lineHeight:1.55,
     boxShadow:"0 1px 3px rgba(0,0,0,0.14)",
-    borderLeft:"2px solid rgba(245,105,30,0.3)",
+    borderLeft:"2px solid rgba(245,105,30,0.35)",
   },
-  asstRow: { display:"flex", alignItems:"flex-start", gap:9, marginBottom:16 },
+  asstRow: { display:"flex", alignItems:"flex-start", gap:9, marginBottom:18 },
   av: {
     width:30, height:30, borderRadius:9,
-    background:"var(--sidebar)", color:"var(--linx)",
+    background:"#0E1117", color:"#F5691E",
     display:"flex", alignItems:"center", justifyContent:"center",
     fontSize:9, fontWeight:900, flexShrink:0, marginTop:2,
-    letterSpacing:"0.07em", boxShadow:"var(--shadow-sm)",
+    letterSpacing:"0.07em", boxShadow:"0 1px 4px rgba(0,0,0,0.2)",
   },
-  body:   { flex:1, minWidth:0 },
-  bubble: {
+  body:    { flex:1, minWidth:0 },
+  bubble:  {
     background:"var(--surface)", border:"1px solid var(--border)",
     padding:"14px 18px", borderRadius:"3px 13px 13px 13px",
     fontSize:13.5, lineHeight:1.72, color:"var(--text-primary)",
     boxShadow:"var(--shadow-xs)", overflowX:"auto", marginBottom:4,
   },
-  err:    { borderColor:"#FCA5A5", background:"#FFF8F8" },
-  actions:{ display:"flex", alignItems:"center", gap:14, marginTop:5 },
+  err:     { borderColor:"#FCA5A5", background:"#FFF8F8" },
+  actions: { display:"flex", alignItems:"center", gap:14, marginTop:5 },
 };
 
 /* ── Markdown styles ───────────────────────────────────────────── */
@@ -148,8 +149,8 @@ const md = {
   code:  { fontFamily:"'JetBrains Mono',monospace", fontSize:11, background:"#F4F6F9",
            padding:"2px 5px", borderRadius:4, color:"#0369A1" },
   hr:    { border:"none", borderTop:"1px solid var(--border-subtle)", margin:"9px 0" },
-  bq:    { borderLeft:"3px solid var(--linx)", padding:"7px 12px",
-           margin:"7px 0", color:"var(--text-secondary)", background:"var(--linx-soft)",
+  bq:    { borderLeft:"3px solid var(--linx)", padding:"7px 12px", margin:"7px 0",
+           color:"var(--text-secondary)", background:"var(--linx-soft)",
            borderRadius:"0 7px 7px 0" },
   tWrap: { overflowX:"auto", margin:"8px 0 10px", borderRadius:10,
            border:"1px solid var(--border)", boxShadow:"var(--shadow-xs)" },
