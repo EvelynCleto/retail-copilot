@@ -447,8 +447,9 @@ async def chat(request: ChatRequest):
     parts = []
     for r in ordered:
         if r:
-            title_sec = r.get("display_question") or r["question"].rstrip("?").strip()
-            parts.append(f"**{title_sec}**\n\n{r['answer']}")
+            # No multi, NÃO adicionar título de seção — a resposta já começa com seu próprio título
+            # Separar com HR para identificar visualmente cada pergunta
+            parts.append(r['answer'])
 
     conv_title = None
     if is_first and request.generate_title:

@@ -1,6 +1,3 @@
-/**
- * RankingTable — tabela premium com barras em TODAS as tabelas (ranking e séries).
- */
 const DMAP = { CALCA:"CALÇA", MACACAO:"MACACÃO", CALCAO:"CALÇÃO", SUETER:"SUÉTER" };
 const MES  = {"01":"Janeiro","02":"Fevereiro","03":"Março","04":"Abril","05":"Maio",
               "06":"Junho","07":"Julho","08":"Agosto","09":"Setembro",
@@ -10,16 +7,22 @@ const MDL  = ["🥇","🥈","🥉"];
 function mapVal(v) {
   if (typeof v !== "string") return v;
   for (const [k,d] of Object.entries(DMAP)) v = v.replace(new RegExp(`\\b${k}\\b`,"g"), d);
-  return v.replace(/^(\d{4})-(\d{2})$/, (_,y,m) => MES[m] ? (y==="2024" ? MES[m] : `${MES[m]} ${y}`) : `${m}/${y}`);
+  return v.replace(/^(\d{4})-(\d{2})$/, (_,y,m) =>
+    MES[m] ? (y==="2024" ? MES[m] : `${MES[m]} ${y}`) : `${m}/${y}`
+  );
 }
 
 function isMoney(k)  { return /receita|valor|total|ticket|preco/i.test(k); }
 function isCount(k)  { return /unidade|quantidade|pedido|cliente/i.test(k); }
 function isPct(k, v) {
-  const byName = /pct|percent|particip|share|var/i.test(k);
+  const byName = /pct|percent|particip|share/i.test(k);
   const n = Number(v);
-  const byVal  = !isNaN(n) && Math.abs(n) > 0 && Math.abs(n) < 100;
+  const byVal = !isNaN(n) && Math.abs(n) > 0 && Math.abs(n) <= 100 && !isMoney(k) && !isCount(k);
   return byName || byVal;
+}
+function isSummable(k, v) {
+  // Só soma colunas de dinheiro ou contagem — NUNCA percentuais
+  return (isMoney(k) || isCount(k)) && !isPct(k, v);
 }
 function isNum(rs, c) { return rs.slice(0,3).every(r => !isNaN(Number(r[c]))); }
 function isSeries(c)  { return /mes|data|periodo/i.test(c); }
@@ -39,20 +42,24 @@ function fmtCell(v, money, count, pct) {
 export default function RankingTable({ data }) {
   if (!data?.length) return null;
 
-  const cols      = Object.keys(data[0]);
-  const labelCol  = cols[0];
-  const valCols   = cols.slice(1);
-  const series    = isSeries(labelCol);
+  const cols     = Object.keys(data[0]);
+  const labelCol = cols[0];
+  const valCols  = cols.slice(1);
+  const series   = isSeries(labelCol);
 
-  // Para barras: usar a primeira coluna de dinheiro OU de contagem
-  const barCol = valCols.find(c => isMoney(c)) || valCols.find(c => isNum(data, c));
+  // Barra: usar coluna de money ou count (não pct)
+  const barCol = valCols.find(c => isMoney(c)) || valCols.find(c => isCount(c) && !isPct(c, data[0]?.[c]));
   const maxVal = barCol ? Math.max(...data.map(r => Math.abs(Number(r[barCol])||0))) : 0;
 
-  // Totais para séries
+  // Totais: APENAS colunas de dinheiro ou contagem — excluir pct
   const totals = valCols.reduce((a, c) => {
-    if (isNum(data, c)) a[c] = data.reduce((s,r) => s+(Number(r[c])||0), 0);
+    const firstVal = data[0]?.[c];
+    if (isNum(data, c) && isSummable(c, firstVal)) {
+      a[c] = data.reduce((s,r) => s + (Number(r[c])||0), 0);
+    }
     return a;
   }, {});
+  const hasTotals = Object.keys(totals).length > 0;
 
   return (
     <div style={t.wrap}>
@@ -61,21 +68,20 @@ export default function RankingTable({ data }) {
           <thead style={t.thead}>
             <tr>
               {!series && <th style={{...t.th, width:36, textAlign:"center"}}>#</th>}
-              <th style={t.th}>{labelCol.toUpperCase().replace(/_/g," ")}</th>
+              <th style={t.th}>{mapVal(labelCol.toUpperCase().replace(/_/g," "))}</th>
               {valCols.map(c => (
                 <th key={c} style={{...t.th, textAlign:"right"}}>
                   {c.toUpperCase().replace(/_/g," ")}
                 </th>
               ))}
-              {/* Coluna de barra: sempre mostrar */}
               {barCol && <th style={{...t.th, width:80}}/>}
             </tr>
           </thead>
           <tbody>
             {data.map((row, i) => {
-              const top3    = i < 3 && !series;
-              const barVal  = barCol ? (Math.abs(Number(row[barCol])||0) / maxVal) * 100 : 0;
-              const lv      = mapVal(String(row[labelCol] ?? ""));
+              const top3   = i < 3 && !series;
+              const barVal = barCol && maxVal > 0 ? (Math.abs(Number(row[barCol])||0)/maxVal)*100 : 0;
+              const lv     = mapVal(String(row[labelCol] ?? ""));
 
               return (
                 <tr key={i} className="rt-row" style={i%2===0 ? t.even : t.odd}>
@@ -86,29 +92,28 @@ export default function RankingTable({ data }) {
                         : <span style={t.rank}>{i+1}</span>}
                     </td>
                   )}
-                  <td style={{...t.td, fontWeight: top3 ? 600 : 400,
-                    color: top3 ? "var(--text-primary)" : "#374151"}}>
+                  <td style={{...t.td, fontWeight:top3?600:400,
+                    color:top3?"var(--text-primary)":"#374151"}}>
                     {lv}
                   </td>
                   {valCols.map(c => (
                     <td key={c} style={{
                       ...t.td, textAlign:"right",
-                      fontFamily: (isMoney(c)||isCount(c)) ? "'JetBrains Mono',monospace" : "inherit",
-                      fontSize: 12.5,
-                      color: top3 ? "var(--text-primary)" : "#374151",
+                      fontFamily:(isMoney(c)||isCount(c))?"'JetBrains Mono',monospace":"inherit",
+                      fontSize:12.5,
+                      color:top3?"var(--text-primary)":"#374151",
                     }}>
                       {fmtCell(row[c], isMoney(c), isCount(c), isPct(c, row[c]))}
                     </td>
                   ))}
-                  {/* Barra de proporção — aparece em TODOS os tipos de tabela */}
                   {barCol && (
                     <td style={t.barTd}>
                       <div style={t.barBg}>
                         <div style={{
                           ...t.barFill,
-                          width: `${barVal.toFixed(1)}%`,
-                          background: top3 ? "var(--linx)" : (series ? "var(--linx)" : "#94A3B8"),
-                          opacity: top3 ? 0.8 : (series ? 0.5 : 0.35),
+                          width:`${barVal.toFixed(1)}%`,
+                          background:"var(--linx)",
+                          opacity:top3?0.85:(series?0.55:0.35),
                         }}/>
                       </div>
                     </td>
@@ -117,9 +122,10 @@ export default function RankingTable({ data }) {
               );
             })}
 
-            {/* Linha de total */}
-            {Object.keys(totals).length > 0 && (
+            {/* Total — apenas se há colunas somáveis (não pct) */}
+            {hasTotals && (
               <tr style={t.totalRow}>
+                {!series && <td style={{...t.td, ...t.totalTd}}/>}
                 <td style={{...t.td, ...t.totalTd, fontWeight:700, color:"var(--text-primary)"}}>
                   Total
                 </td>
@@ -136,7 +142,6 @@ export default function RankingTable({ data }) {
           </tbody>
         </table>
       </div>
-
     </div>
   );
 }
@@ -161,5 +166,4 @@ const t = {
   barFill:  { height:"100%", borderRadius:2, transition:"width .5s ease" },
   totalRow: { background:"#F8FAFC" },
   totalTd:  { borderTop:"1px solid var(--border)", borderBottom:"none", paddingTop:10 },
-
 };
