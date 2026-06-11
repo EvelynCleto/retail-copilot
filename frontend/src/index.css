@@ -125,3 +125,5 @@ button, textarea { font-family: inherit; }
 
 /* ── Actions menu hover ────────────────────────────────────────── */
 .action-item:hover { background: #F5F6F8 !important; }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }

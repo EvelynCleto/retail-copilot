@@ -64,11 +64,7 @@ const CTX = {
     "Como o ticket evoluiu de 2023 para 2024?",
   ],
 };
-const PHASES = [
-  ["Analisando...", 0],
-  ["Consultando os dados...", 950],
-  ["Preparando resposta...", 2500],
-];
+// Status agora vem via SSE do backend em tempo real
 
 function topic(q) {
   const s = (q || "").toLowerCase();
@@ -103,16 +99,16 @@ export default function App() {
   const [convs, setConvs]     = useState(() => [mkC()]);
   const [active, setActive]   = useState(1);
   const [input, setInput]     = useState("");
-  const [loading, setLoading] = useState(false);
-  const [phase, setPhase]     = useState("");
+  const [loading, setLoading]         = useState(false);
+  const [phase, setPhase]             = useState("");
+  const [streamingText, setStreaming] = useState("");  // tokens em tempo real
   const [sidebar, setSidebar] = useState(true);
   const [used, setUsed]       = useState(new Set());
   const [chipList, setChipList] = useState(BASE.slice(0, 5));
-  const [chipsVisible, setChipsVisible] = useState(true); 
 
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
-  const ptimers   = useRef([]);
+
 
   const conv = convs.find(c => c.id === active) || convs[0];
   const msgs = conv?.messages || [];
@@ -126,11 +122,7 @@ export default function App() {
     }
   }, [msgs]);
 
-  const startPhases = () => {
-    ptimers.current.forEach(clearTimeout);
-    ptimers.current = PHASES.map(([t, d]) => setTimeout(() => setPhase(t), d));
-  };
-  const stopPhases = () => { ptimers.current.forEach(clearTimeout); setPhase(""); };
+  // startPhases/stopPhases removidos — status vem via SSE
 
   const upd = (id, fn) => setConvs(p => p.map(c => c.id === id ? fn(c) : c));
   const apiHist = () => msgs.map(m => ({ role: m.role, content: m.content }));
@@ -146,7 +138,14 @@ export default function App() {
     startPhases();
 
     try {
-      const data = await sendMessage(q, apiHist(), isFirst);
+      // Resetar streaming antes de iniciar
+      setStreaming("");
+
+      const data = await sendMessage(q, apiHist(), isFirst, {
+        onStatus: (text) => setPhase(text),
+        onToken:  (text) => setStreaming(prev => prev + text),
+      });
+      setStreaming("");  // limpar ao finalizar
       upd(active, c => ({
         ...c,
         title: (!c.titleLocked && data.conversation_title) ? data.conversation_title : c.title,
@@ -215,7 +214,7 @@ export default function App() {
                 {msgs.map((m, i) => (
                   <MessageBubble key={`${active}-${i}`} message={m} isNew={i === msgs.length - 1} />
                 ))}
-                {loading && <Thinking phase={phase} />}
+                {loading && <Thinking phase={phase} streamingText={streamingText} />}
                 <div ref={bottomRef} />
               </div>
           }
@@ -337,32 +336,55 @@ const em = {
   arrow:   { color:"var(--text-disabled)", fontSize:10, flexShrink:0, marginTop:1 },
 };
 
-/* ── Thinking ────────────────────────────────────────────────────── */
-function Thinking({ phase }) {
+/* ── Thinking / Streaming ──────────────────────────────────────── */
+function Thinking({ phase, streamingText }) {
+  const hasStream = streamingText && streamingText.length > 0;
   return (
     <div style={th.row}>
       <div style={th.av}><span style={th.ri}>RI</span></div>
-      <div style={th.bub}>
-        <span style={th.ph}>{phase || "Analisando..."}</span>
-        <span style={th.dots}>
-          {[0,1,2].map(i => <span key={i} className={`dot${i}`} style={th.dot} />)}
-        </span>
+      <div style={{ ...th.bub, ...(hasStream ? th.bubStream : {}) }}>
+        {hasStream
+          ? (
+            /* Texto real sendo digitado */
+            <div style={th.streamBox}>
+              <span style={th.streamText}>{streamingText}</span>
+              <span style={th.cursor} />
+            </div>
+          )
+          : (
+            /* Fase de status com pontos */
+            <>
+              <span style={th.ph}>{phase || "Analisando..."}</span>
+              <span style={th.dots}>
+                {[0,1,2].map(i => <span key={i} className={`dot${i}`} style={th.dot} />)}
+              </span>
+            </>
+          )
+        }
       </div>
     </div>
   );
 }
 const th = {
-  row:  { display:"flex", gap:8, marginBottom:12, alignItems:"flex-start" },
-  av:   { width:26, height:26, borderRadius:8, background:"var(--sidebar)",
-          display:"flex", alignItems:"center", justifyContent:"center",
-          flexShrink:0, boxShadow:"var(--shadow-sm)" },
-  ri:   { color:"var(--linx)", fontSize:8, fontWeight:900, letterSpacing:"0.07em" },
-  bub:  { background:"var(--surface)", border:"1px solid var(--border)", padding:"8px 14px",
-          borderRadius:"3px 12px 12px 12px", display:"flex", alignItems:"center",
-          gap:10, boxShadow:"var(--shadow-xs)" },
-  ph:   { fontSize:11.5, color:"var(--text-muted)", fontStyle:"italic" },
-  dots: { display:"flex", gap:3, alignItems:"center" },
-  dot:  { display:"inline-block", width:4, height:4, borderRadius:"50%", background:"#D1D5DB" },
+  row:      { display:"flex", gap:9, marginBottom:12, alignItems:"flex-start" },
+  av:       { width:30, height:30, borderRadius:9, background:"var(--sidebar)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              flexShrink:0, marginTop:2, boxShadow:"var(--shadow-sm)" },
+  ri:       { color:"var(--linx)", fontSize:9, fontWeight:900, letterSpacing:"0.07em" },
+  bub:      { background:"var(--surface)", border:"1px solid var(--border)",
+              padding:"10px 16px", borderRadius:"3px 13px 13px 13px",
+              display:"flex", alignItems:"center", gap:10, boxShadow:"var(--shadow-xs)",
+              maxWidth:"82%", minWidth:160 },
+  bubStream:{ alignItems:"flex-start", padding:"12px 16px" },
+  ph:       { fontSize:12, color:"var(--text-muted)", fontStyle:"italic" },
+  dots:     { display:"flex", gap:3, alignItems:"center" },
+  dot:      { display:"inline-block", width:4, height:4, borderRadius:"50%", background:"#D1D5DB" },
+  streamBox:{ flex:1 },
+  streamText:{ fontSize:13.5, lineHeight:1.7, color:"var(--text-primary)",
+               whiteSpace:"pre-wrap", wordBreak:"break-word" },
+  cursor:   { display:"inline-block", width:2, height:15, background:"var(--linx)",
+              marginLeft:2, verticalAlign:"text-bottom",
+              animation:"blink 0.9s step-end infinite" },
 };
 
 /* ── Footer / Input ──────────────────────────────────────────────── */
