@@ -1,0 +1,136 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* ── Linx brand palette ─────────────────────────────────────── */
+  --linx:           #F5691E;   /* laranja principal Linx         */
+  --linx-deep:      #D94F08;   /* laranja escuro / hover          */
+  --linx-soft:      #FFF2EB;   /* laranja pálido / bg accent      */
+  --linx-muted:     #FDE8D8;   /* laranja suave para badges       */
+
+  /* ── Neutrals (Apple-grade) ─────────────────────────────────── */
+  --bg:             #F5F6F8;   /* fundo geral                     */
+  --surface:        #FFFFFF;   /* cards e bubbles                 */
+  --surface-raised: #FAFBFC;   /* linhas zebra                    */
+  --border:         #E5E8ED;   /* bordas padrão                   */
+  --border-subtle:  #EEF0F4;   /* bordas internas                 */
+
+  /* ── Text ───────────────────────────────────────────────────── */
+  --text-primary:   #0E1117;
+  --text-secondary: #4B5563;
+  --text-muted:     #9CA3AF;
+  --text-disabled:  #C5CBD4;
+
+  /* ── Semantic ───────────────────────────────────────────────── */
+  --green:          #16A34A;
+  --green-soft:     #DCFCE7;
+  --red:            #DC2626;
+  --red-soft:       #FEE2E2;
+
+  /* ── Sidebar ────────────────────────────────────────────────── */
+  --sidebar:        #0E1117;
+  --sidebar-border: rgba(255,255,255,0.07);
+  --sidebar-hover:  rgba(255,255,255,0.055);
+  --sidebar-active: rgba(245,105,30,0.18);
+  --sidebar-text:   #9CA3AF;
+  --sidebar-text-active: #F5F6F8;
+
+  /* ── Shadows ────────────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.07);
+  --shadow-md: 0 2px 10px rgba(0,0,0,0.09);
+
+  /* ── Motion ─────────────────────────────────────────────────── */
+  --ease: cubic-bezier(0.25,0.1,0.25,1);
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.6;
+  letter-spacing: -0.003em;
+}
+button { font-family: inherit; }
+textarea { font-family: inherit; }
+
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: #D1D5DB; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+
+/* ── Animations ────────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(7px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes msgIn {
+  from { opacity:0; transform:translateY(3px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+@keyframes dotPulse {
+  0%,80%,100% { opacity:.18; transform:scale(.65); }
+  40%          { opacity:1;   transform:scale(1); }
+}
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position:  200% 0; }
+}
+
+.msg-new { animation: msgIn .15s var(--ease) forwards; }
+.dot0 { animation: dotPulse 1.3s ease-in-out 0s   infinite; }
+.dot1 { animation: dotPulse 1.3s ease-in-out .22s infinite; }
+.dot2 { animation: dotPulse 1.3s ease-in-out .44s infinite; }
+
+/* ── Suggestion cards ──────────────────────────────────────────── */
+.ecard {
+  transition: border-color .13s, box-shadow .13s, transform .1s;
+}
+.ecard:hover:not(:disabled) {
+  border-color: var(--linx) !important;
+  box-shadow: 0 2px 12px rgba(245,105,30,.12) !important;
+  transform: translateY(-1px);
+}
+
+/* ── Table rows ────────────────────────────────────────────────── */
+.rt-row { transition: background .08s; }
+.rt-row:hover td { background: #FFF3EC !important; }
+
+/* ── Sidebar conv hover ────────────────────────────────────────── */
+.conv-item-wrap:hover .conv-dot-btn { opacity: 1 !important; }
+.conv-btn { transition: background .1s; }
+.conv-btn:hover { background: var(--sidebar-hover) !important; }
+
+/* ── Textarea focus ────────────────────────────────────────────── */
+.ri-textarea:focus {
+  border-color: var(--linx) !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(245,105,30,.14) !important;
+  outline: none;
+}
+
+/* ── Markdown zebra ────────────────────────────────────────────── */
+.md-tr:nth-child(even) td { background: var(--surface-raised); }
+
+/* ── Suggestion chips ─────────────────────────────────────────── */
+.suggestion-chip:hover:not(:disabled) {
+  border-color: var(--linx) !important;
+  color: var(--linx-deep) !important;
+  background: var(--linx-soft) !important;
+  box-shadow: 0 1px 6px rgba(245,105,30,.12) !important;
+}
+
+/* ── Chat action buttons ──────────────────────────────────────── */
+button[title*="Baixar"]:hover,
+button[title*="Copiar texto"]:hover {
+  background: var(--bg) !important;
+  border-color: var(--border) !important;
+  color: var(--text-primary) !important;
+}
