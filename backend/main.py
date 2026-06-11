@@ -240,7 +240,7 @@ def _apply_display_map(answer: str) -> str:
 
 def _postprocess(answer: str) -> str:
     """Aplica todos os pós-processamentos na resposta antes de entregar ao frontend."""
-    answer = _postprocess(answer)
+    answer = _apply_display_map(answer)
     answer = _fix_entity_format(answer)
     return answer
 
@@ -345,19 +345,13 @@ async def chat(request: ChatRequest):
                 yield sse_status("Analisando os dados estratégicos...")
                 from prompt import SYSTEM_PROMPT_STRATEGIC
                 client = _get_client()
-                full_text = ""
-                # Stream real token a token
-                with client.messages.stream(
+                response = client.messages.create(
                     model=_MODEL_MAIN,
                     max_tokens=_MAX_TOKENS_STRATEGIC,
                     system=SYSTEM_PROMPT_STRATEGIC,
                     messages=[{"role": "user", "content": message}],
-                ) as stream_ctx:
-                    for text in stream_ctx.text_stream:
-                        full_text += text
-                        yield sse_token(text)
-
-                full_text = _postprocess(full_text)
+                )
+                full_text = _postprocess(response.content[0].text.strip())
                 title = generate_title(message) if is_first and request.generate_title else None
                 yield sse_done({"answer": full_text, "display_question": None,
                                 "conversation_title": title, "sql": None, "table": None,
@@ -404,18 +398,13 @@ async def chat(request: ChatRequest):
                 user_content = f"Pergunta: {q}\n\nResultados:\n{results_text}"
                 from prompt import SYSTEM_PROMPT_ANSWER
                 client = _get_client()
-                full_answer = ""
-                with client.messages.stream(
+                response = client.messages.create(
                     model=_MODEL_MAIN,
                     max_tokens=_MAX_TOKENS_ANSWER,
                     system=SYSTEM_PROMPT_ANSWER,
                     messages=[{"role": "user", "content": user_content}],
-                ) as stream_ctx:
-                    for text in stream_ctx.text_stream:
-                        full_answer += text
-                        yield sse_token(text)
-
-                full_answer = _postprocess(full_answer)
+                )
+                full_answer = _postprocess(response.content[0].text.strip())
                 title = None
                 if is_first and request.generate_title:
                     try: title = generate_title(message)
