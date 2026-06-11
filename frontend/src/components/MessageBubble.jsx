@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import KpiCards from "./KpiCards";
 import RankingTable from "./RankingTable";
 import SqlBlock from "./SqlBlock";
+import DataChart, { detectChartType } from "./DataChart";
 
 /* ── Copy button ───────────────────────────────────────────────── */
 function CopyBtn({ text }) {
@@ -88,6 +89,11 @@ function AsstMessage({ message, isNew }) {
             <span style={s.insightDot}>●</span>
             <span>{insight}</span>
           </div>
+        )}
+
+        {/* Gráfico automático — aparece antes da tabela quando aplicável */}
+        {hasTable && detectChartType(message.table) && (
+          <DataChart data={message.table}/>
         )}
 
         {/* Tabela ou texto */}
